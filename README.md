@@ -54,9 +54,8 @@ npx skills add addyosmani/web-quality-skills --skill core-web-vitals
 npx skills add addyosmani/web-quality-skills --skill performance
 npx skills add addyosmani/web-quality-skills --skill seo
 npx skills add addyosmani/web-quality-skills --skill web-quality-audit
+npx skills add mattpocock/skills/tdd
 ```
-
-The `tdd` skill in `~/.agents/skills/tdd` was manually installed (not tracked in `.skill-lock.json`).
 
 ### Verify
 
