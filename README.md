@@ -2,11 +2,16 @@
 
 Portable AI tools configuration: custom skills, agents, and development guidelines for Claude Code, Codex CLI, and OpenCode.
 
+## Prerequisites
+
+- `jq` — required for Claude MCP setup (`sudo apt install jq` / `brew install jq`)
+
 ## Quick Start
 
 ```bash
 git clone <repo-url> ~/projects/oxDevelop/oxStack
 cd ~/projects/oxDevelop/oxStack
+cp .env.example .env   # Edit with your values (AWS_PROFILE, etc.)
 ./install.sh
 ```
 
@@ -33,6 +38,22 @@ Deployed to `~/.claude/agents/`:
 | **git-committer** | haiku | Commits changes with Conventional Commits format |
 | **tdd-specialist** | sonnet | Test-writing specialist with red-green-refactor workflow |
 | **test-reviewer** | sonnet | Test quality reviewer (GOOD/NOISY/FRAGILE/WRONG classification) |
+
+### MCP Servers
+
+Deployed to `~/.claude/settings.json` (merged) and `~/.codex/config.toml` (appended):
+
+| Server | Description |
+|--------|-------------|
+| **awslabs.aws-diagram-mcp-server** | Generate AWS architecture diagrams |
+| **awslabs.aws-documentation-mcp-server** | Query AWS documentation |
+| **awslabs.aws-pricing-mcp-server** | Look up AWS service pricing |
+| **awslabs.cfn-mcp-server** | CloudFormation template analysis (readonly) |
+| **serverless** | Serverless Framework MCP integration |
+| **ultracite** | Ultracite remote MCP |
+| **powertools** | AWS Lambda Powertools MCP |
+
+Servers needing env vars use values from `.env` (see `.env.example`).
 
 ### Development Guidelines
 
