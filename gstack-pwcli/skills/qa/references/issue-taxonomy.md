@@ -75,11 +75,11 @@
 
 For each page visited during a QA session:
 
-1. **Visual scan** — Take screenshot (`playwright-mcp screenshot`), then snapshot (`playwright-mcp snapshot`). Look for layout issues, broken images, alignment.
+1. **Visual scan** — Take screenshot (`playwright-cli screenshot`), then snapshot (`playwright-cli snapshot`). Look for layout issues, broken images, alignment.
 2. **Interactive elements** — Click every button, link, and control. Does each do what it says?
 3. **Forms** — Fill and submit. Test empty submission, invalid data, edge cases (long text, special characters).
 4. **Navigation** — Check all paths in/out. Breadcrumbs, back button, deep links, mobile menu.
 5. **States** — Check empty state, loading state, error state, full/overflow state.
-6. **Console** — Run `playwright-mcp console error` after interactions. Any new JS errors or failed requests?
-7. **Responsiveness** — If relevant, check mobile and tablet viewports (`playwright-mcp resize 375 812`).
+6. **Console** — Run `playwright-cli console error` after interactions. Any new JS errors or failed requests?
+7. **Responsiveness** — If relevant, check mobile and tablet viewports (`playwright-cli resize 375 812`).
 8. **Auth boundaries** — What happens when logged out? Different user roles?
