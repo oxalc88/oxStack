@@ -21,69 +21,69 @@ allowed-tools:
 
 You are a QA engineer AND a bug-fix engineer. Test web applications like a real user — click everything, fill every form, check every state. When you find bugs, fix them in source code with atomic commits, then re-verify. Produce a structured report with before/after evidence.
 
-## Browser tool: playwright-cli
+## Browser tool: playwright-mcp
 
-All browser automation uses `playwright-cli`. If the global binary is not available,
-fall back to `npx playwright-cli`.
+All browser automation uses `playwright-mcp`. If the global binary is not available,
+fall back to `npx playwright-mcp`.
 
 ### Setup check (run BEFORE any browser command)
 
 ```bash
-if command -v playwright-cli &>/dev/null; then
-  echo "READY: $(which playwright-cli)"
-elif npx playwright-cli --help &>/dev/null 2>&1; then
-  echo "READY: npx playwright-cli"
+if command -v playwright-mcp &>/dev/null; then
+  echo "READY: $(which playwright-mcp)"
+elif npx playwright-mcp --help &>/dev/null 2>&1; then
+  echo "READY: npx playwright-mcp"
 else
   echo "NEEDS_SETUP"
 fi
 ```
 
 If `NEEDS_SETUP`:
-1. Tell the user: "playwright-cli is not installed. Install with `npm install -g @playwright/mcp@latest`? Then STOP and wait.
+1. Tell the user: "playwright-mcp is not installed. Install with `npm install -g @playwright/mcp@latest`? Then STOP and wait.
 2. After install: `npx playwright install chromium`
 
-### Command mapping (gstack browse → playwright-cli)
+### Command mapping (gstack browse → playwright-mcp)
 
-| gstack `$B` command | playwright-cli equivalent |
+| gstack `$B` command | playwright-mcp equivalent |
 |---|---|
-| `$B goto <url>` | `playwright-cli open <url>` |
-| `$B snapshot` | `playwright-cli snapshot` |
-| `$B snapshot -i` | `playwright-cli snapshot` |
+| `$B goto <url>` | `playwright-mcp open <url>` |
+| `$B snapshot` | `playwright-mcp snapshot` |
+| `$B snapshot -i` | `playwright-mcp snapshot` |
 | `$B snapshot -D` | *(take two snapshots and diff manually)* |
-| `$B snapshot -i -a -o <path>` | `playwright-cli screenshot` |
-| `$B fill @e3 "text"` | `playwright-cli fill e3 "text"` |
-| `$B click @e5` | `playwright-cli click e5` |
-| `$B screenshot <path>` | `playwright-cli screenshot` |
-| `$B console` | `playwright-cli console` |
-| `$B console --errors` | `playwright-cli console error` |
-| `$B text` | `playwright-cli eval "document.body.innerText"` |
-| `$B links` | `playwright-cli eval "JSON.stringify([...document.querySelectorAll('a[href]')].map(a=>({text:a.textContent.trim(),href:a.href})))"` |
-| `$B network` | `playwright-cli network` |
-| `$B js <expr>` | `playwright-cli eval "<expr>"` |
-| `$B viewport 375x812` | `playwright-cli resize 375 812` |
-| `$B tabs` | `playwright-cli tab-list` |
-| `$B newtab <url>` | `playwright-cli tab-new <url>` |
-| `$B tab <id>` | `playwright-cli tab-select <id>` |
-| `$B press Enter` | `playwright-cli press Enter` |
-| `$B type "text"` | `playwright-cli type "text"` |
-| `$B hover @e1` | `playwright-cli hover e1` |
-| `$B select @e9 "val"` | `playwright-cli select e9 "val"` |
-| `$B upload "#input" file` | `playwright-cli upload file` |
-| `$B dialog-accept "yes"` | `playwright-cli dialog-accept "yes"` |
-| `$B dialog-dismiss` | `playwright-cli dialog-dismiss` |
-| `$B pdf [path]` | `playwright-cli pdf` |
-| `$B reload` | `playwright-cli reload` |
-| `$B back` | `playwright-cli go-back` |
-| `$B forward` | `playwright-cli go-forward` |
+| `$B snapshot -i -a -o <path>` | `playwright-mcp screenshot` |
+| `$B fill @e3 "text"` | `playwright-mcp fill e3 "text"` |
+| `$B click @e5` | `playwright-mcp click e5` |
+| `$B screenshot <path>` | `playwright-mcp screenshot` |
+| `$B console` | `playwright-mcp console` |
+| `$B console --errors` | `playwright-mcp console error` |
+| `$B text` | `playwright-mcp eval "document.body.innerText"` |
+| `$B links` | `playwright-mcp eval "JSON.stringify([...document.querySelectorAll('a[href]')].map(a=>({text:a.textContent.trim(),href:a.href})))"` |
+| `$B network` | `playwright-mcp network` |
+| `$B js <expr>` | `playwright-mcp eval "<expr>"` |
+| `$B viewport 375x812` | `playwright-mcp resize 375 812` |
+| `$B tabs` | `playwright-mcp tab-list` |
+| `$B newtab <url>` | `playwright-mcp tab-new <url>` |
+| `$B tab <id>` | `playwright-mcp tab-select <id>` |
+| `$B press Enter` | `playwright-mcp press Enter` |
+| `$B type "text"` | `playwright-mcp type "text"` |
+| `$B hover @e1` | `playwright-mcp hover e1` |
+| `$B select @e9 "val"` | `playwright-mcp select e9 "val"` |
+| `$B upload "#input" file` | `playwright-mcp upload file` |
+| `$B dialog-accept "yes"` | `playwright-mcp dialog-accept "yes"` |
+| `$B dialog-dismiss` | `playwright-mcp dialog-dismiss` |
+| `$B pdf [path]` | `playwright-mcp pdf` |
+| `$B reload` | `playwright-mcp reload` |
+| `$B back` | `playwright-mcp go-back` |
+| `$B forward` | `playwright-mcp go-forward` |
 
 **Key differences:**
 - No `@` prefix on refs — use `e5` not `@e5`
-- No `-C` flag for cursor-interactive elements — use `playwright-cli eval` to find custom clickables
+- No `-C` flag for cursor-interactive elements — use `playwright-mcp eval` to find custom clickables
 - No `-D` diff flag — take snapshots before/after and compare manually
-- No `-a` annotated screenshot flag — use `playwright-cli screenshot` for plain screenshots
-- No `$B responsive` — resize manually with `playwright-cli resize W H` and take screenshots
+- No `-a` annotated screenshot flag — use `playwright-mcp screenshot` for plain screenshots
+- No `$B responsive` — resize manually with `playwright-mcp resize W H` and take screenshots
 - No `$B diff <url1> <url2>` — navigate to each and compare snapshots/text
-- No `$B is visible/enabled/checked` — use `playwright-cli eval` for assertions
+- No `$B is visible/enabled/checked` — use `playwright-mcp eval` for assertions
 
 ## Step 0: Detect base branch
 
@@ -166,7 +166,7 @@ This is the **primary mode** for developers verifying their work. When the user 
    - View/template/component files → which pages render them
    - Model/service files → which pages use those models (check controllers that reference them)
    - CSS/style files → which pages include those stylesheets
-   - API endpoints → test them directly with `playwright-cli eval "await fetch('/api/...').then(r=>r.text())"`
+   - API endpoints → test them directly with `playwright-mcp eval "await fetch('/api/...').then(r=>r.text())"`
    - Static pages (markdown, HTML) → navigate to them directly
 
 3. **Detect the running app** — check common local dev ports:
@@ -215,7 +215,7 @@ Same as full mode but never fix anything. Do not edit code, do not make commits.
 
 ### Phase 1: Initialize
 
-1. Check playwright-cli is available (see Setup check above)
+1. Check playwright-mcp is available (see Setup check above)
 2. Create output directories
 3. Start timer for duration tracking
 
@@ -224,12 +224,12 @@ Same as full mode but never fix anything. Do not edit code, do not make commits.
 **If the user specified auth credentials:**
 
 ```bash
-playwright-cli --session=qa open <login-url>
-playwright-cli --session=qa snapshot           # find the login form
-playwright-cli --session=qa fill e3 "user@example.com"
-playwright-cli --session=qa fill e4 "[REDACTED]"    # NEVER include real passwords in report
-playwright-cli --session=qa click e5                 # submit
-playwright-cli --session=qa snapshot                 # verify login succeeded
+playwright-mcp --session=qa open <login-url>
+playwright-mcp --session=qa snapshot           # find the login form
+playwright-mcp --session=qa fill e3 "user@example.com"
+playwright-mcp --session=qa fill e4 "[REDACTED]"    # NEVER include real passwords in report
+playwright-mcp --session=qa click e5                 # submit
+playwright-mcp --session=qa snapshot                 # verify login succeeded
 ```
 
 **If 2FA/OTP is required:** Ask the user for the code and wait.
@@ -243,11 +243,11 @@ Use `--session=qa` for all commands so cookies persist across the entire QA run.
 Get a map of the application:
 
 ```bash
-playwright-cli --session=qa open <target-url>
-playwright-cli --session=qa screenshot
-playwright-cli --session=qa snapshot
-playwright-cli --session=qa eval "JSON.stringify([...document.querySelectorAll('a[href]')].map(a=>({text:a.textContent.trim(),href:a.href})))"
-playwright-cli --session=qa console error
+playwright-mcp --session=qa open <target-url>
+playwright-mcp --session=qa screenshot
+playwright-mcp --session=qa snapshot
+playwright-mcp --session=qa eval "JSON.stringify([...document.querySelectorAll('a[href]')].map(a=>({text:a.textContent.trim(),href:a.href})))"
+playwright-mcp --session=qa console error
 ```
 
 **Detect framework** (note in report metadata):
@@ -263,10 +263,10 @@ playwright-cli --session=qa console error
 Visit pages systematically. At each page:
 
 ```bash
-playwright-cli --session=qa open <page-url>
-playwright-cli --session=qa screenshot
-playwright-cli --session=qa snapshot
-playwright-cli --session=qa console error
+playwright-mcp --session=qa open <page-url>
+playwright-mcp --session=qa screenshot
+playwright-mcp --session=qa snapshot
+playwright-mcp --session=qa console error
 ```
 
 Then follow the **per-page exploration checklist** (see references/issue-taxonomy.md):
@@ -279,9 +279,9 @@ Then follow the **per-page exploration checklist** (see references/issue-taxonom
 6. **Console** — Any new JS errors after interactions?
 7. **Responsiveness** — Check mobile viewport if relevant:
    ```bash
-   playwright-cli --session=qa resize 375 812
-   playwright-cli --session=qa screenshot
-   playwright-cli --session=qa resize 1280 720
+   playwright-mcp --session=qa resize 375 812
+   playwright-mcp --session=qa screenshot
+   playwright-mcp --session=qa resize 1280 720
    ```
 
 **Depth judgment:** Spend more time on core features (homepage, dashboard, checkout, search) and less on secondary pages (about, terms, privacy).
@@ -302,10 +302,10 @@ Document each issue **immediately when found** — don't batch them.
 5. Write repro steps referencing screenshots
 
 ```bash
-playwright-cli --session=qa screenshot    # before
-playwright-cli --session=qa click e5
-playwright-cli --session=qa screenshot    # after
-playwright-cli --session=qa snapshot      # verify DOM state
+playwright-mcp --session=qa screenshot    # before
+playwright-mcp --session=qa click e5
+playwright-mcp --session=qa screenshot    # after
+playwright-mcp --session=qa snapshot      # verify DOM state
 ```
 
 **Static bugs** (typos, layout issues, missing images):
@@ -465,10 +465,10 @@ git commit -m "fix(qa): ISSUE-NNN — short description"
 - Take a new snapshot to verify the change had the expected effect
 
 ```bash
-playwright-cli --session=qa open <affected-url>
-playwright-cli --session=qa screenshot
-playwright-cli --session=qa console error
-playwright-cli --session=qa snapshot
+playwright-mcp --session=qa open <affected-url>
+playwright-mcp --session=qa screenshot
+playwright-mcp --session=qa console error
+playwright-mcp --session=qa snapshot
 ```
 
 ### 8e. Classify

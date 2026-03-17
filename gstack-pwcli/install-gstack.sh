@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# gstack + playwright-cli installer
-# Installs gstack skills, replaces browse/qa with playwright-cli versions
+# gstack + playwright-mcp installer
+# Installs gstack skills, replaces browse/qa with playwright-mcp versions
 # Works on Ubuntu and macOS — no Bun required
 
 GSTACK_DIR="$HOME/.claude/skills/gstack"
@@ -28,16 +28,16 @@ else
   git clone --depth 1 https://github.com/garrytan/gstack.git "$GSTACK_DIR"
 fi
 
-# --- Step 2: Install playwright-cli ---
-if command -v playwright-cli &>/dev/null; then
-  info "playwright-cli already installed: $(which playwright-cli)"
+# --- Step 2: Install playwright-mcp ---
+if command -v playwright-mcp &>/dev/null; then
+  info "playwright-mcp already installed: $(which playwright-mcp)"
 else
-  info "Installing playwright-cli..."
+  info "Installing playwright-mcp..."
   npm install -g @playwright/mcp@latest
 fi
 
 # Install chromium browser if needed
-if ! npx playwright-cli open --help &>/dev/null 2>&1; then
+if ! npx playwright-mcp open --help &>/dev/null 2>&1; then
   info "Installing Chromium for Playwright..."
   npx playwright install chromium
   # Ubuntu may need system deps
@@ -46,13 +46,13 @@ if ! npx playwright-cli open --help &>/dev/null 2>&1; then
   fi
 fi
 
-# --- Step 3: Replace browse skill with playwright-cli version ---
-info "Replacing browse skill with playwright-cli version..."
+# --- Step 3: Replace browse skill with playwright-mcp version ---
+info "Replacing browse skill with playwright-mcp version..."
 rm -rf "$GSTACK_DIR/browse/SKILL.md"
 cp "$SCRIPT_DIR/skills/browse/SKILL.md" "$GSTACK_DIR/browse/SKILL.md"
 
-# --- Step 4: Replace qa skill with playwright-cli version ---
-info "Replacing qa skill with playwright-cli version..."
+# --- Step 4: Replace qa skill with playwright-mcp version ---
+info "Replacing qa skill with playwright-mcp version..."
 rm -rf "$GSTACK_DIR/qa/SKILL.md"
 cp "$SCRIPT_DIR/skills/qa/SKILL.md" "$GSTACK_DIR/qa/SKILL.md"
 cp "$SCRIPT_DIR/skills/qa/references/issue-taxonomy.md" "$GSTACK_DIR/qa/references/issue-taxonomy.md"
@@ -65,11 +65,11 @@ mkdir -p "$SKILLS_DIR"
 # Skills we keep from gstack (unchanged)
 GSTACK_SKILLS="plan-ceo-review plan-eng-review review ship retro"
 
-# Skills we replaced with playwright-cli versions
+# Skills we replaced with playwright-mcp versions
 REPLACED_SKILLS="browse qa"
 
 # Skills we skip entirely
-# setup-browser-cookies (macOS-only, replaced by playwright-cli sessions)
+# setup-browser-cookies (macOS-only, replaced by playwright-mcp sessions)
 # gstack-upgrade (we manage our own updates)
 # qa-only (merged into qa --report-only)
 
@@ -99,21 +99,21 @@ echo "    /plan-ceo-review   — Founder/product thinking mode"
 echo "    /plan-eng-review   — Engineering architecture mode"
 echo "    /review            — Paranoid staff engineer code review"
 echo "    /ship              — Release engineer (sync, test, push, PR)"
-echo "    /browse            — Browser automation via playwright-cli"
-echo "    /qa                — Systematic QA testing via playwright-cli"
+echo "    /browse            — Browser automation via playwright-mcp"
+echo "    /qa                — Systematic QA testing via playwright-mcp"
 echo "    /retro             — Weekly engineering retrospective"
 echo ""
 echo "  Add this to your CLAUDE.md:"
 echo ""
 cat << 'CLAUDE_SECTION'
-## gstack + playwright-cli
+## gstack + playwright-mcp
 
-Use the /browse skill with playwright-cli for all web browsing. NEVER use mcp__claude-in-chrome__* tools.
+Use the /browse skill with playwright-mcp for all web browsing. NEVER use mcp__claude-in-chrome__* tools.
 
 Available skills: /plan-ceo-review, /plan-eng-review, /review, /ship, /browse, /qa, /retro
 
-- /browse and /qa use playwright-cli (not gstack's Bun binary). No @ prefix on element refs — use e5 not @e5.
+- /browse and /qa use playwright-mcp (not gstack's Bun binary). No @ prefix on element refs — use e5 not @e5.
 - /qa supports modes: diff-aware (auto on feature branches), full, quick, regression, report-only.
-- For authenticated page testing, log in via playwright-cli sessions instead of /setup-browser-cookies.
-- If playwright-cli is not found, run: npm install -g @playwright/mcp@latest
+- For authenticated page testing, log in via playwright-mcp sessions instead of /setup-browser-cookies.
+- If playwright-mcp is not found, run: npm install -g @playwright/mcp@latest
 CLAUDE_SECTION
