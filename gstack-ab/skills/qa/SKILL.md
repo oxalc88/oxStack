@@ -21,69 +21,119 @@ allowed-tools:
 
 You are a QA engineer AND a bug-fix engineer. Test web applications like a real user — click everything, fill every form, check every state. When you find bugs, fix them in source code with atomic commits, then re-verify. Produce a structured report with before/after evidence.
 
-## Browser tool: playwright-cli
+## Browser tool: agent-browser
 
-All browser automation uses `playwright-cli`. If the global binary is not available,
-fall back to `npx playwright-cli`.
+All browser automation uses `agent-browser`.
 
 ### Setup check (run BEFORE any browser command)
 
 ```bash
-if command -v playwright-cli &>/dev/null; then
-  echo "READY: $(which playwright-cli)"
-elif npx playwright-cli --help &>/dev/null 2>&1; then
-  echo "READY: npx playwright-cli"
+if command -v agent-browser &>/dev/null; then
+  echo "READY: $(which agent-browser)"
 else
   echo "NEEDS_SETUP"
 fi
 ```
 
 If `NEEDS_SETUP`:
-1. Tell the user: "playwright-cli is not installed. Install with `npm install -g @playwright/cli@latest`? Then STOP and wait.
-2. After install: `npx playwright install chromium`
+1. Tell the user: "agent-browser is not installed. Install with `npm install -g agent-browser && agent-browser install --with-deps`?" Then STOP and wait.
 
-### Command mapping (gstack browse → playwright-cli)
+### Command mapping (gstack browse → agent-browser)
 
-| gstack `$B` command | playwright-cli equivalent |
+| gstack `$B` command | agent-browser equivalent |
 |---|---|
-| `$B goto <url>` | `playwright-cli open <url>` |
-| `$B snapshot` | `playwright-cli snapshot` |
-| `$B snapshot -i` | `playwright-cli snapshot` |
-| `$B snapshot -D` | *(take two snapshots and diff manually)* |
-| `$B snapshot -i -a -o <path>` | `playwright-cli screenshot` |
-| `$B fill @e3 "text"` | `playwright-cli fill e3 "text"` |
-| `$B click @e5` | `playwright-cli click e5` |
-| `$B screenshot <path>` | `playwright-cli screenshot` |
-| `$B console` | `playwright-cli console` |
-| `$B console --errors` | `playwright-cli console error` |
-| `$B text` | `playwright-cli eval "document.body.innerText"` |
-| `$B links` | `playwright-cli eval "JSON.stringify([...document.querySelectorAll('a[href]')].map(a=>({text:a.textContent.trim(),href:a.href})))"` |
-| `$B network` | `playwright-cli network` |
-| `$B js <expr>` | `playwright-cli eval "<expr>"` |
-| `$B viewport 375x812` | `playwright-cli resize 375 812` |
-| `$B tabs` | `playwright-cli tab-list` |
-| `$B newtab <url>` | `playwright-cli tab-new <url>` |
-| `$B tab <id>` | `playwright-cli tab-select <id>` |
-| `$B press Enter` | `playwright-cli press Enter` |
-| `$B type "text"` | `playwright-cli type "text"` |
-| `$B hover @e1` | `playwright-cli hover e1` |
-| `$B select @e9 "val"` | `playwright-cli select e9 "val"` |
-| `$B upload "#input" file` | `playwright-cli upload file` |
-| `$B dialog-accept "yes"` | `playwright-cli dialog-accept "yes"` |
-| `$B dialog-dismiss` | `playwright-cli dialog-dismiss` |
-| `$B pdf [path]` | `playwright-cli pdf` |
-| `$B reload` | `playwright-cli reload` |
-| `$B back` | `playwright-cli go-back` |
-| `$B forward` | `playwright-cli go-forward` |
+| `$B goto <url>` | `agent-browser open <url>` |
+| `$B snapshot` | `agent-browser snapshot` |
+| `$B snapshot -i` | `agent-browser snapshot -i` |
+| `$B snapshot -D` | `agent-browser diff snapshot --baseline before.txt` |
+| `$B snapshot -i -a -o <path>` | `agent-browser screenshot --annotate` |
+| `$B fill @e3 "text"` | `agent-browser fill e3 "text"` |
+| `$B click @e5` | `agent-browser click e5` |
+| `$B screenshot <path>` | `agent-browser screenshot` |
+| `$B console` | `agent-browser console` |
+| `$B console --errors` | `agent-browser console error` |
+| `$B text` | `agent-browser get text` |
+| `$B links` | `agent-browser eval "JSON.stringify([...document.querySelectorAll('a[href]')].map(a=>({text:a.textContent.trim(),href:a.href})))"` |
+| `$B network` | `agent-browser network requests` |
+| `$B js <expr>` | `agent-browser eval "<expr>"` |
+| `$B viewport 375x812` | `agent-browser set viewport 375 812` |
+| `$B tabs` | `agent-browser tab` |
+| `$B newtab <url>` | `agent-browser tab new <url>` |
+| `$B tab <id>` | `agent-browser tab <id>` |
+| `$B press Enter` | `agent-browser press Enter` |
+| `$B type "text"` | `agent-browser type <ref> "text"` |
+| `$B hover @e1` | `agent-browser hover e1` |
+| `$B select @e9 "val"` | `agent-browser select e9 "val"` |
+| `$B upload "#input" file` | `agent-browser upload file` |
+| `$B dialog-accept "yes"` | `agent-browser dialog accept "yes"` |
+| `$B dialog-dismiss` | `agent-browser dialog dismiss` |
+| `$B pdf [path]` | `agent-browser pdf <path>` |
+| `$B reload` | `agent-browser reload` |
+| `$B back` | `agent-browser back` |
+| `$B forward` | `agent-browser forward` |
+| `$B is visible <ref>` | `agent-browser is visible <ref>` |
+| `$B is enabled <ref>` | `agent-browser is enabled <ref>` |
+| `$B is checked <ref>` | `agent-browser is checked <ref>` |
+| `$B diff <url1> <url2>` | `agent-browser diff url <url1> <url2>` |
 
 **Key differences:**
 - No `@` prefix on refs — use `e5` not `@e5`
-- No `-C` flag for cursor-interactive elements — use `playwright-cli eval` to find custom clickables
-- No `-D` diff flag — take snapshots before/after and compare manually
-- No `-a` annotated screenshot flag — use `playwright-cli screenshot` for plain screenshots
-- No `$B responsive` — resize manually with `playwright-cli resize W H` and take screenshots
-- No `$B diff <url1> <url2>` — navigate to each and compare snapshots/text
-- No `$B is visible/enabled/checked` — use `playwright-cli eval` for assertions
+- `type` requires a ref: `agent-browser type e3 "text"` not just `agent-browser type "text"`
+- Session flag uses space: `--session qa` not `--session=qa`
+- No `$B responsive` — resize manually with `agent-browser set viewport W H` and take screenshots
+
+### agent-browser capabilities for QA
+
+These features are especially useful during QA testing:
+
+```bash
+# Compact snapshots (smaller context window)
+agent-browser snapshot -i -c              # interactive-only + compact
+agent-browser snapshot -i -c -d 3         # with depth limit
+agent-browser snapshot -s "#main"         # scoped to CSS selector
+
+# Annotated screenshots (numbered labels on interactive elements)
+agent-browser screenshot --annotate
+
+# Diffing (regression testing)
+agent-browser diff snapshot --baseline before.txt   # a11y tree diff
+agent-browser diff screenshot --baseline before.png # visual diff
+agent-browser diff url <url1> <url2>                # compare two URLs
+
+# State checks (assertions)
+agent-browser is visible <ref>
+agent-browser is enabled <ref>
+agent-browser is checked <ref>
+
+# Element inspection
+agent-browser get text <ref>              # element text content
+agent-browser get value <ref>             # input value
+agent-browser get attr <ref> <name>       # attribute value
+agent-browser get count <selector>        # count matching elements
+
+# Semantic locators (find elements without snapshot refs)
+agent-browser find role <value> <action>
+agent-browser find text <value> <action>
+agent-browser find label <value> <action>
+agent-browser find testid <value> <action>
+
+# Explicit waits (page readiness)
+agent-browser wait <selector>             # wait for element
+agent-browser wait --text "..."           # wait for text to appear
+agent-browser wait --load networkidle     # wait for network idle
+
+# Error tracking
+agent-browser errors                      # uncaught JS exceptions (separate from console)
+
+# Auth state persistence
+agent-browser state save auth.json        # save cookies + storage
+agent-browser state load auth.json        # restore saved state
+
+# Output control
+agent-browser --json                      # machine-readable output
+agent-browser --max-output 50000          # prevent context flooding
+agent-browser --content-boundaries        # LLM-safe output wrapping
+```
 
 ## Step 0: Detect base branch
 
@@ -166,7 +216,7 @@ This is the **primary mode** for developers verifying their work. When the user 
    - View/template/component files → which pages render them
    - Model/service files → which pages use those models (check controllers that reference them)
    - CSS/style files → which pages include those stylesheets
-   - API endpoints → test them directly with `playwright-cli eval "await fetch('/api/...').then(r=>r.text())"`
+   - API endpoints → test them directly with `agent-browser eval "await fetch('/api/...').then(r=>r.text())"`
    - Static pages (markdown, HTML) → navigate to them directly
 
 3. **Detect the running app** — check common local dev ports:
@@ -215,7 +265,7 @@ Same as full mode but never fix anything. Do not edit code, do not make commits.
 
 ### Phase 1: Initialize
 
-1. Check playwright-cli is available (see Setup check above)
+1. Check agent-browser is available (see Setup check above)
 2. Create output directories
 3. Start timer for duration tracking
 
@@ -224,30 +274,38 @@ Same as full mode but never fix anything. Do not edit code, do not make commits.
 **If the user specified auth credentials:**
 
 ```bash
-playwright-cli --session=qa open <login-url>
-playwright-cli --session=qa snapshot           # find the login form
-playwright-cli --session=qa fill e3 "user@example.com"
-playwright-cli --session=qa fill e4 "[REDACTED]"    # NEVER include real passwords in report
-playwright-cli --session=qa click e5                 # submit
-playwright-cli --session=qa snapshot                 # verify login succeeded
+agent-browser --session qa open <login-url>
+agent-browser --session qa snapshot           # find the login form
+agent-browser --session qa fill e3 "user@example.com"
+agent-browser --session qa fill e4 "[REDACTED]"    # NEVER include real passwords in report
+agent-browser --session qa click e5                 # submit
+agent-browser --session qa snapshot                 # verify login succeeded
 ```
 
 **If 2FA/OTP is required:** Ask the user for the code and wait.
 
 **If CAPTCHA blocks you:** Tell the user: "Please complete the CAPTCHA in the browser, then tell me to continue."
 
-Use `--session=qa` for all commands so cookies persist across the entire QA run.
+Use `--session qa` for all commands so cookies persist across the entire QA run.
+
+**To persist auth for future runs:**
+```bash
+agent-browser --session qa state save .qa-reports/auth-state.json
+# Restore later:
+agent-browser --session qa state load .qa-reports/auth-state.json
+```
 
 ### Phase 3: Orient
 
 Get a map of the application:
 
 ```bash
-playwright-cli --session=qa open <target-url>
-playwright-cli --session=qa screenshot
-playwright-cli --session=qa snapshot
-playwright-cli --session=qa eval "JSON.stringify([...document.querySelectorAll('a[href]')].map(a=>({text:a.textContent.trim(),href:a.href})))"
-playwright-cli --session=qa console error
+agent-browser --session qa open <target-url>
+agent-browser --session qa wait --load networkidle
+agent-browser --session qa screenshot
+agent-browser --session qa snapshot -i -c
+agent-browser --session qa eval "JSON.stringify([...document.querySelectorAll('a[href]')].map(a=>({text:a.textContent.trim(),href:a.href})))"
+agent-browser --session qa console error
 ```
 
 **Detect framework** (note in report metadata):
@@ -263,10 +321,12 @@ playwright-cli --session=qa console error
 Visit pages systematically. At each page:
 
 ```bash
-playwright-cli --session=qa open <page-url>
-playwright-cli --session=qa screenshot
-playwright-cli --session=qa snapshot
-playwright-cli --session=qa console error
+agent-browser --session qa open <page-url>
+agent-browser --session qa wait --load networkidle
+agent-browser --session qa screenshot
+agent-browser --session qa snapshot -i -c
+agent-browser --session qa console error
+agent-browser --session qa errors
 ```
 
 Then follow the **per-page exploration checklist** (see references/issue-taxonomy.md):
@@ -279,9 +339,9 @@ Then follow the **per-page exploration checklist** (see references/issue-taxonom
 6. **Console** — Any new JS errors after interactions?
 7. **Responsiveness** — Check mobile viewport if relevant:
    ```bash
-   playwright-cli --session=qa resize 375 812
-   playwright-cli --session=qa screenshot
-   playwright-cli --session=qa resize 1280 720
+   agent-browser --session qa set viewport 375 812
+   agent-browser --session qa screenshot
+   agent-browser --session qa set viewport 1280 720
    ```
 
 **Depth judgment:** Spend more time on core features (homepage, dashboard, checkout, search) and less on secondary pages (about, terms, privacy).
@@ -302,10 +362,10 @@ Document each issue **immediately when found** — don't batch them.
 5. Write repro steps referencing screenshots
 
 ```bash
-playwright-cli --session=qa screenshot    # before
-playwright-cli --session=qa click e5
-playwright-cli --session=qa screenshot    # after
-playwright-cli --session=qa snapshot      # verify DOM state
+agent-browser --session qa screenshot    # before
+agent-browser --session qa click e5
+agent-browser --session qa screenshot    # after
+agent-browser --session qa snapshot      # verify DOM state
 ```
 
 **Static bugs** (typos, layout issues, missing images):
@@ -465,10 +525,12 @@ git commit -m "fix(qa): ISSUE-NNN — short description"
 - Take a new snapshot to verify the change had the expected effect
 
 ```bash
-playwright-cli --session=qa open <affected-url>
-playwright-cli --session=qa screenshot
-playwright-cli --session=qa console error
-playwright-cli --session=qa snapshot
+agent-browser --session qa open <affected-url>
+agent-browser --session qa wait --load networkidle
+agent-browser --session qa screenshot
+agent-browser --session qa console error
+agent-browser --session qa errors
+agent-browser --session qa snapshot
 ```
 
 ### 8e. Classify
@@ -551,6 +613,7 @@ If the repo has a `TODOS.md`:
 │   ├── issue-001-before.png               # Before fix (if fixed)
 │   ├── issue-001-after.png                # After fix (if fixed)
 │   └── ...
+├── auth-state.json                        # Saved auth state (if authenticated)
 └── baseline.json                          # For regression mode
 ```
 

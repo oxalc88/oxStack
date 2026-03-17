@@ -152,8 +152,8 @@ do_install() {
 
   echo ""
 
-  # --- gstack + playwright-cli ---
-  "$SCRIPT_DIR/gstack-pwcli/install-gstack.sh"
+  # --- gstack + agent-browser ---
+  "$SCRIPT_DIR/gstack-ab/install-gstack.sh"
 
   echo ""
   info "Done. All skills, agents, guidelines, and MCP servers installed."

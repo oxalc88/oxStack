@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# gstack + playwright-cli installer
-# Installs gstack skills, replaces browse/qa with playwright-cli versions
-# Works on Ubuntu and macOS — no Bun required
+# gstack + agent-browser installer
+# Installs gstack skills, replaces qa with agent-browser version
+# Works on Ubuntu and macOS — no Bun or Playwright required
 
 GSTACK_DIR="$HOME/.claude/skills/gstack"
 SKILLS_DIR="$HOME/.claude/skills"
@@ -28,31 +28,24 @@ else
   git clone --depth 1 https://github.com/garrytan/gstack.git "$GSTACK_DIR"
 fi
 
-# --- Step 2: Install playwright-cli ---
-if command -v playwright-cli &>/dev/null; then
-  info "playwright-cli already installed: $(which playwright-cli)"
+# --- Step 2: Install agent-browser ---
+if command -v agent-browser &>/dev/null; then
+  info "agent-browser already installed: $(which agent-browser)"
 else
-  info "Installing playwright-cli..."
-  npm install -g @playwright/cli@latest
+  info "Installing agent-browser..."
+  npm install -g agent-browser
 fi
 
-# Install chromium browser if needed
-if ! npx playwright-cli open --help &>/dev/null 2>&1; then
-  info "Installing Chromium for Playwright..."
-  npx playwright install chromium
-  # Ubuntu may need system deps
-  if [ "$(uname)" = "Linux" ]; then
-    npx playwright install-deps chromium 2>/dev/null || warn "Could not install system deps — run 'npx playwright install-deps chromium' manually if browse fails"
-  fi
-fi
+# Install browser + system deps if needed
+info "Setting up browser for agent-browser..."
+agent-browser install --with-deps
 
-# --- Step 3: Replace browse skill with playwright-cli version ---
-info "Replacing browse skill with playwright-cli version..."
-rm -rf "$GSTACK_DIR/browse/SKILL.md"
-cp "$SCRIPT_DIR/skills/browse/SKILL.md" "$GSTACK_DIR/browse/SKILL.md"
+# --- Step 3: Install official agent-browser skill for /browse ---
+info "Installing official agent-browser skill..."
+npx skills add vercel-labs/agent-browser --skill agent-browser
 
-# --- Step 4: Replace qa skill with playwright-cli version ---
-info "Replacing qa skill with playwright-cli version..."
+# --- Step 4: Replace qa skill with agent-browser version ---
+info "Replacing qa skill with agent-browser version..."
 rm -rf "$GSTACK_DIR/qa/SKILL.md"
 cp "$SCRIPT_DIR/skills/qa/SKILL.md" "$GSTACK_DIR/qa/SKILL.md"
 cp "$SCRIPT_DIR/skills/qa/references/issue-taxonomy.md" "$GSTACK_DIR/qa/references/issue-taxonomy.md"
@@ -65,11 +58,12 @@ mkdir -p "$SKILLS_DIR"
 # Skills we keep from gstack (unchanged)
 GSTACK_SKILLS="plan-ceo-review plan-eng-review review ship retro"
 
-# Skills we replaced with playwright-cli versions
-REPLACED_SKILLS="browse qa"
+# Skills we replaced with agent-browser versions
+REPLACED_SKILLS="qa"
 
 # Skills we skip entirely
-# setup-browser-cookies (macOS-only, replaced by playwright-cli sessions)
+# browse (now handled by official agent-browser skill)
+# setup-browser-cookies (macOS-only, replaced by agent-browser sessions)
 # gstack-upgrade (we manage our own updates)
 # qa-only (merged into qa --report-only)
 
@@ -83,7 +77,7 @@ for skill in $GSTACK_SKILLS $REPLACED_SKILLS; do
 done
 
 # --- Step 6: Remove symlinks for skipped skills ---
-for skip in setup-browser-cookies gstack-upgrade qa-only; do
+for skip in setup-browser-cookies gstack-upgrade qa-only browse; do
   if [ -L "$SKILLS_DIR/$skip" ]; then
     rm -f "$SKILLS_DIR/$skip"
     info "  Removed symlink: $skip"
@@ -99,21 +93,21 @@ echo "    /plan-ceo-review   — Founder/product thinking mode"
 echo "    /plan-eng-review   — Engineering architecture mode"
 echo "    /review            — Paranoid staff engineer code review"
 echo "    /ship              — Release engineer (sync, test, push, PR)"
-echo "    /browse            — Browser automation via playwright-cli"
-echo "    /qa                — Systematic QA testing via playwright-cli"
+echo "    /browse            — Browser automation via agent-browser (official skill)"
+echo "    /qa                — Systematic QA testing via agent-browser"
 echo "    /retro             — Weekly engineering retrospective"
 echo ""
 echo "  Add this to your CLAUDE.md:"
 echo ""
 cat << 'CLAUDE_SECTION'
-## gstack + playwright-cli
+## gstack + agent-browser
 
-Use the /browse skill with playwright-cli for all web browsing. NEVER use mcp__claude-in-chrome__* tools.
+Use the /browse skill with agent-browser for all web browsing. NEVER use mcp__claude-in-chrome__* tools.
 
 Available skills: /plan-ceo-review, /plan-eng-review, /review, /ship, /browse, /qa, /retro
 
-- /browse and /qa use playwright-cli (not gstack's Bun binary). No @ prefix on element refs — use e5 not @e5.
+- /browse uses the official agent-browser skill. /qa uses agent-browser (not gstack's Bun binary). No @ prefix on element refs — use e5 not @e5.
 - /qa supports modes: diff-aware (auto on feature branches), full, quick, regression, report-only.
-- For authenticated page testing, log in via playwright-cli sessions instead of /setup-browser-cookies.
-- If playwright-cli is not found, run: npm install -g @playwright/cli@latest
+- For authenticated page testing, log in via agent-browser sessions (--session name) instead of /setup-browser-cookies.
+- If agent-browser is not found, run: npm install -g agent-browser && agent-browser install --with-deps
 CLAUDE_SECTION

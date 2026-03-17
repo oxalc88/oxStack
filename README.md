@@ -39,9 +39,9 @@ Deployed to `~/.claude/agents/`:
 | **tdd-specialist** | sonnet | Test-writing specialist with red-green-refactor workflow |
 | **test-reviewer** | sonnet | Test quality reviewer (GOOD/NOISY/FRAGILE/WRONG classification) |
 
-### gstack + playwright-cli Skills
+### gstack + agent-browser Skills
 
-Installed automatically via `gstack-pwcli/install-gstack.sh`. Clones [gstack](https://github.com/garrytan/gstack) and replaces the `browse` and `qa` skills with versions adapted to use `playwright-cli` instead of gstack's compiled Bun binary. No Bun dependency — works on Ubuntu and macOS.
+Installed automatically via `gstack-ab/install-gstack.sh`. Clones [gstack](https://github.com/garrytan/gstack), installs the official [agent-browser](https://github.com/vercel-labs/agent-browser) skill for `/browse`, and replaces the `qa` skill with a version adapted to use `agent-browser` instead of gstack's compiled Bun binary. No Bun or Playwright dependency — works on Ubuntu and macOS.
 
 | Skill | Description |
 |-------|-------------|
@@ -49,11 +49,11 @@ Installed automatically via `gstack-pwcli/install-gstack.sh`. Clones [gstack](ht
 | **plan-eng-review** | Engineering architecture — data flow, diagrams, failure modes, test matrix |
 | **review** | Paranoid staff engineer code review — race conditions, N+1 queries, trust boundaries |
 | **ship** | Release engineer — sync main, run tests, push, open PR |
-| **browse** | Browser automation via `playwright-cli` (adapted from gstack) |
-| **qa** | Systematic QA testing via `playwright-cli` (adapted from gstack) |
+| **browse** | Browser automation via `agent-browser` (official Vercel skill) |
+| **qa** | Systematic QA testing via `agent-browser` (adapted from gstack) |
 | **retro** | Engineering retrospective — commit analysis, team breakdown, trends |
 
-**Prerequisites:** `npm install -g @playwright/cli@latest`
+**Prerequisites:** `npm install -g agent-browser && agent-browser install --with-deps`
 
 ### MCP Servers
 
