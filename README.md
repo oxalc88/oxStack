@@ -39,6 +39,22 @@ Deployed to `~/.claude/agents/`:
 | **tdd-specialist** | sonnet | Test-writing specialist with red-green-refactor workflow |
 | **test-reviewer** | sonnet | Test quality reviewer (GOOD/NOISY/FRAGILE/WRONG classification) |
 
+### gstack + playwright-cli Skills
+
+Installed automatically via `gstack-pwcli/install-gstack.sh`. Clones [gstack](https://github.com/garrytan/gstack) and replaces the `browse` and `qa` skills with versions adapted to use `playwright-cli` instead of gstack's compiled Bun binary. No Bun dependency — works on Ubuntu and macOS.
+
+| Skill | Description |
+|-------|-------------|
+| **plan-ceo-review** | Founder/product thinking — rethink the problem, find the 10-star product |
+| **plan-eng-review** | Engineering architecture — data flow, diagrams, failure modes, test matrix |
+| **review** | Paranoid staff engineer code review — race conditions, N+1 queries, trust boundaries |
+| **ship** | Release engineer — sync main, run tests, push, open PR |
+| **browse** | Browser automation via `playwright-cli` (adapted from gstack) |
+| **qa** | Systematic QA testing via `playwright-cli` (adapted from gstack) |
+| **retro** | Engineering retrospective — commit analysis, team breakdown, trends |
+
+**Prerequisites:** `npm install -g @playwright/mcp@latest`
+
 ### MCP Servers
 
 Deployed to `~/.claude/settings.json` (merged) and `~/.codex/config.toml` (appended):

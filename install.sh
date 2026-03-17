@@ -151,6 +151,11 @@ do_install() {
   install_mcp
 
   echo ""
+
+  # --- gstack + playwright-cli ---
+  "$SCRIPT_DIR/gstack-pwcli/install-gstack.sh"
+
+  echo ""
   info "Done. All skills, agents, guidelines, and MCP servers installed."
 }
 
