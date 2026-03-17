@@ -39,7 +39,7 @@ fi
 ```
 
 If `NEEDS_SETUP`:
-1. Tell the user: "playwright-cli is not installed. Install with `npm install -g @playwright/mcp@latest`? Then STOP and wait.
+1. Tell the user: "playwright-cli is not installed. Install with `npm install -g @playwright/cli@latest`? Then STOP and wait.
 2. After install: `npx playwright install chromium`
 
 ### Command mapping (gstack browse → playwright-cli)

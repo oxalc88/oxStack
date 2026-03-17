@@ -9,7 +9,7 @@ allowed-tools: Bash(playwright-cli:*), Bash(npx playwright-cli:*)
 ## Prerequisites
 
 ```bash
-npm install -g @playwright/mcp@latest
+npm install -g @playwright/cli@latest
 ```
 
 If the global binary is not available, fall back to `npx playwright-cli`.
@@ -271,7 +271,7 @@ playwright-cli open https://myapp.com --headed
 ## Troubleshooting
 
 **`playwright-cli: command not found`**
-→ Install globally: `npm install -g @playwright/mcp@latest`
+→ Install globally: `npm install -g @playwright/cli@latest`
 → Or use `npx playwright-cli` as fallback
 
 **Browser not launching on Ubuntu**

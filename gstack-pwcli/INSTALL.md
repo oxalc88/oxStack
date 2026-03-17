@@ -47,7 +47,7 @@ Add a "gstack + playwright-cli" section to CLAUDE.md that says:
 - /browse and /qa use playwright-cli (not gstack's Bun binary). No @ prefix on element refs — use e5 not @e5.
 - /qa supports modes: diff-aware (auto on feature branches), full, quick (--quick), exhaustive (--exhaustive), regression (--regression baseline.json), report-only (--report-only).
 - For authenticated page testing, log in via playwright-cli named sessions (--session=name) instead of /setup-browser-cookies.
-- If playwright-cli is not found, run: npm install -g @playwright/mcp@latest
+- If playwright-cli is not found, run: npm install -g @playwright/cli@latest
 
 Then ask if I also want to add gstack to the current project so teammates get it.
 ```

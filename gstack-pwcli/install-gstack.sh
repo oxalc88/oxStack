@@ -33,7 +33,7 @@ if command -v playwright-cli &>/dev/null; then
   info "playwright-cli already installed: $(which playwright-cli)"
 else
   info "Installing playwright-cli..."
-  npm install -g @playwright/mcp@latest
+  npm install -g @playwright/cli@latest
 fi
 
 # Install chromium browser if needed
@@ -115,5 +115,5 @@ Available skills: /plan-ceo-review, /plan-eng-review, /review, /ship, /browse, /
 - /browse and /qa use playwright-cli (not gstack's Bun binary). No @ prefix on element refs — use e5 not @e5.
 - /qa supports modes: diff-aware (auto on feature branches), full, quick, regression, report-only.
 - For authenticated page testing, log in via playwright-cli sessions instead of /setup-browser-cookies.
-- If playwright-cli is not found, run: npm install -g @playwright/mcp@latest
+- If playwright-cli is not found, run: npm install -g @playwright/cli@latest
 CLAUDE_SECTION

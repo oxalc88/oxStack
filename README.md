@@ -53,7 +53,7 @@ Installed automatically via `gstack-pwcli/install-gstack.sh`. Clones [gstack](ht
 | **qa** | Systematic QA testing via `playwright-cli` (adapted from gstack) |
 | **retro** | Engineering retrospective — commit analysis, team breakdown, trends |
 
-**Prerequisites:** `npm install -g @playwright/mcp@latest`
+**Prerequisites:** `npm install -g @playwright/cli@latest`
 
 ### MCP Servers
 
