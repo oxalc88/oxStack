@@ -4,7 +4,8 @@ Portable AI tools configuration: custom skills, agents, and development guidelin
 
 ## Prerequisites
 
-- `jq` — required for Claude MCP setup (`sudo apt install jq` / `brew install jq`)
+- [mise](https://mise.jdx.dev/) — manages the Go toolchain automatically
+- `npm` — required for agent-browser and third-party skills
 
 ## Quick Start
 
@@ -12,10 +13,76 @@ Portable AI tools configuration: custom skills, agents, and development guidelin
 git clone <repo-url> ~/projects/oxDevelop/oxStack
 cd ~/projects/oxDevelop/oxStack
 cp .env.example .env   # Edit with your values (AWS_PROFILE, etc.)
-./install.sh
+
+# Install Go via mise (version pinned in .mise.toml)
+mise install
+
+# Build and install the CLI
+go install ./cmd/oxstack
+
+# Run the full installer
+oxstack install
 ```
 
-The script creates symlinks from this repo to the appropriate config directories. Edits made here are immediately reflected everywhere.
+## CLI Usage
+
+The `oxstack` CLI is a single Go binary that works on macOS, Linux, and Windows.
+
+### `oxstack install`
+
+Runs the full installer — symlinks skills and agents, generates guideline files, merges MCP server configs, clones gstack, installs agent-browser, installs third-party skills, and deploys the -byOx skill variants.
+
+```bash
+oxstack install
+```
+
+### `oxstack sync`
+
+Checks gstack for upstream changes to forked skills (qa, design-review). Pulls latest gstack, shows commits since your last sync, and filters out boilerplate — only methodology-relevant changes are shown. Prompts to mark the current gstack commit as synced.
+
+```bash
+oxstack sync
+```
+
+### `oxstack update`
+
+Regenerates -byOx skills from gstack's latest SKILL.md. For each forked skill it:
+
+1. Extracts the methodology from gstack (strips frontmatter and boilerplate sections)
+2. Transforms `$B` browse commands to `agent-browser` equivalents
+3. Preserves your -byOx header (frontmatter, intro, command mapping table)
+4. Shows a colored, section-aware diff summary and asks for confirmation before writing
+
+```bash
+oxstack update          # colored summary + condensed diff
+oxstack update --full   # full unified diff (raw, verbose)
+```
+
+### `oxstack help`
+
+```bash
+oxstack help
+```
+
+## Building from Source
+
+```bash
+# Build in current directory
+go build -o oxstack ./cmd/oxstack
+
+# Install to $GOPATH/bin (add to PATH)
+go install ./cmd/oxstack
+
+# Cross-compile
+GOOS=linux GOARCH=amd64 go build -o oxstack-linux ./cmd/oxstack
+GOOS=windows GOARCH=amd64 go build -o oxstack.exe ./cmd/oxstack
+```
+
+If running outside the repo, set `OXSTACK_ROOT` to the repo path so the CLI can find its config files:
+
+```bash
+export OXSTACK_ROOT=~/projects/oxDevelop/oxStack
+```
 
 ## What Gets Installed
 
@@ -41,23 +108,32 @@ Deployed to `~/.claude/agents/`:
 
 ### gstack + agent-browser Skills
 
-Installed automatically via `gstack-ab/install-gstack.sh`. Clones [gstack](https://github.com/garrytan/gstack), installs the official [agent-browser](https://github.com/vercel-labs/agent-browser) skill for `/browse`, and replaces the `qa` skill with a version adapted to use `agent-browser` instead of gstack's compiled Bun binary. No Bun or Playwright dependency — works on Ubuntu and macOS.
+Installed automatically by `oxstack install`. Clones [gstack](https://github.com/garrytan/gstack), installs [agent-browser](https://github.com/vercel-labs/agent-browser), and deploys -byOx skill variants that use `agent-browser` instead of gstack's compiled Bun binary. No Bun or Playwright dependency — works on macOS, Linux, and Windows.
 
 | Skill | Description |
 |-------|-------------|
-| **plan-ceo-review** | Founder/product thinking — rethink the problem, find the 10-star product |
-| **plan-eng-review** | Engineering architecture — data flow, diagrams, failure modes, test matrix |
-| **review** | Paranoid staff engineer code review — race conditions, N+1 queries, trust boundaries |
-| **ship** | Release engineer — sync main, run tests, push, open PR |
-| **browse** | Browser automation via `agent-browser` (official Vercel skill) |
-| **qa** | Systematic QA testing via `agent-browser` (adapted from gstack) |
-| **retro** | Engineering retrospective — commit analysis, team breakdown, trends |
+| **qa-byOx** | Systematic QA testing via agent-browser — test, fix, verify loop |
+| **design-review-byOx** | Designer's eye audit via agent-browser — find and fix visual issues |
 
-**Prerequisites:** `npm install -g agent-browser && agent-browser install --with-deps`
+### Third-party Skills
+
+Installed automatically by `oxstack install`:
+
+| Skill | Source |
+|-------|--------|
+| **agent-browser** | Vercel — browser automation |
+| **find-skills** | Vercel — discover installable skills |
+| **accessibility** | Addy Osmani — WCAG 2.2 audit |
+| **best-practices** | Addy Osmani — security & code quality |
+| **core-web-vitals** | Addy Osmani — LCP/INP/CLS optimization |
+| **performance** | Addy Osmani — page speed optimization |
+| **seo** | Addy Osmani — search engine optimization |
+| **web-quality-audit** | Addy Osmani — Lighthouse audit |
+| **tdd** | Matt Pocock — test-driven development |
 
 ### MCP Servers
 
-Deployed to `~/.claude/settings.json` (merged) and `~/.codex/config.toml` (appended):
+Merged into `~/.claude/settings.json` and appended to `~/.codex/config.toml`:
 
 | Server | Description |
 |--------|-------------|
@@ -73,47 +149,23 @@ Servers needing env vars use values from `.env` (see `.env.example`).
 
 ### Development Guidelines
 
-Generated to `~/.codex/AGENTS.md` and `~/.opencode/AGENTS.md`:
+Generated to `~/.codex/AGENTS.md` and `~/.opencode/AGENTS.md`. Shared development philosophy, process, git safety defaults, and quality gates. The OpenCode version includes an additional multi-model delivery flow section.
 
-Shared development philosophy, process, git safety defaults, and quality gates. The OpenCode version includes an additional multi-model delivery flow section.
+## Workflow
 
-## External Skills
-
-These third-party skills are installed separately and are **not managed by this repo**. They are documented here for reproducibility on new machines.
-
-### Install All
-
-```bash
-npx skills add vercel-labs/skills --skill find-skills
-npx skills add addyosmani/web-quality-skills --skill accessibility
-npx skills add addyosmani/web-quality-skills --skill best-practices
-npx skills add addyosmani/web-quality-skills --skill core-web-vitals
-npx skills add addyosmani/web-quality-skills --skill performance
-npx skills add addyosmani/web-quality-skills --skill seo
-npx skills add addyosmani/web-quality-skills --skill web-quality-audit
-npx skills add mattpocock/skills/tdd
+```
+oxstack install     # First time setup (or after adding new skills/agents)
+oxstack sync        # After gstack updates — review methodology changes
+oxstack update      # Apply gstack methodology changes to -byOx skills
+oxstack uninstall   # Remove all symlinks, generated files, and MCP servers
 ```
 
-### Verify
-
-After installing, external skills should appear in:
-- `~/.agents/skills/` (canonical location)
-- `~/.claude/skills/` (symlinked automatically by the skills CLI)
+Edit skills and agents directly in this repo. Changes are reflected immediately through symlinks — no reinstall needed. Only re-run `oxstack install` when adding new skills/agents or regenerating guideline files.
 
 ## Uninstall
 
 ```bash
-./install.sh --uninstall
+oxstack uninstall
 ```
 
-Removes all symlinks and generated files created by the install script. External skills and backups (`.bak` files) are not affected.
-
-## Updating
-
-Edit files directly in this repo. Changes to skills and agents are reflected immediately through symlinks.
-
-For generated files (Codex/OpenCode AGENTS.md), re-run:
-
-```bash
-./install.sh
-```
+Removes all skill/agent symlinks, generated AGENTS.md files, MCP server entries, and -byOx skills. External skills and backups (`.bak` files) are not affected.
