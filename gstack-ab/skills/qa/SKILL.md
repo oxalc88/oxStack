@@ -1,5 +1,5 @@
 ---
-name: qa
+name: qa-byOx
 version: 2.0.0
 description: |
   Systematically QA test a web application and fix bugs found. Runs QA testing,
@@ -135,6 +135,40 @@ agent-browser --max-output 50000          # prevent context flooding
 agent-browser --content-boundaries        # LLM-safe output wrapping
 ```
 
+
+## Steps to reproduce
+1. {step}
+
+## Raw output
+```
+{paste the actual error or unexpected output here}
+```
+
+## What would make this a 10
+{one sentence: what gstack should have done differently}
+
+**Date:** {YYYY-MM-DD} | **Version:** {gstack version} | **Skill:** /{skill}
+```
+
+Slug: lowercase, hyphens, max 60 chars (e.g. `browse-js-no-await`). Skip if file already exists. Max 3 reports per session. File inline and continue — don't stop the workflow. Tell user: "Filed gstack field report: {title}"
+
+
+## Steps to reproduce
+1. {step}
+
+## Raw output
+```
+{paste the actual error or unexpected output here}
+```
+
+## What would make this a 10
+{one sentence: what gstack should have done differently}
+
+**Date:** {YYYY-MM-DD} | **Version:** {gstack version} | **Skill:** /{skill}
+```
+
+Slug: lowercase, hyphens, max 60 chars (e.g. `browse-js-no-await`). Skip if file already exists. Max 3 reports per session. File inline and continue — don't stop the workflow. Tell user: "Filed gstack field report: {title}"
+
 ## Step 0: Detect base branch
 
 Determine which branch this PR targets. Use the result as "the base branch" in all subsequent steps.
@@ -154,6 +188,10 @@ branch name wherever the instructions say "the base branch."
 
 ---
 
+# /qa: Test → Fix → Verify
+
+You are a QA engineer AND a bug-fix engineer. Test web applications like a real user — click everything, fill every form, check every state. When you find bugs, fix them in source code with atomic commits, then re-verify. Produce a structured report with before/after evidence.
+
 ## Setup
 
 **Parse the user's request for these parameters:**
@@ -162,10 +200,10 @@ branch name wherever the instructions say "the base branch."
 |-----------|---------|-----------------:|
 | Target URL | (auto-detect or required) | `https://myapp.com`, `http://localhost:3000` |
 | Tier | Standard | `--quick`, `--exhaustive` |
-| Mode | full | `--regression .qa-reports/baseline.json` |
-| Output dir | `.qa-reports/` | `Output to /tmp/qa` |
+| Mode | full | `--regression .gstack/qa-reports/baseline.json` |
+| Output dir | `.gstack/qa-reports/` | `Output to /tmp/qa` |
 | Scope | Full app (or diff-scoped) | `Focus on the billing page` |
-| Auth | None | `Sign in to user@example.com` |
+| Auth | None | `Sign in to user@example.com`, `Import cookies from cookies.json` |
 
 **Tiers determine which issues get fixed:**
 - **Quick:** Fix critical + high severity only
@@ -174,30 +212,41 @@ branch name wherever the instructions say "the base branch."
 
 **If no URL is given and you're on a feature branch:** Automatically enter **diff-aware mode** (see Modes below). This is the most common case — the user just shipped code on a branch and wants to verify it works.
 
-**Require clean working tree before starting:**
-```bash
-if [ -n "$(git status --porcelain)" ]; then
-  echo "ERROR: Working tree is dirty. Commit or stash changes before running /qa."
-  exit 1
-fi
-```
-
-**Create output directories:**
+**Check for clean working tree:**
 
 ```bash
-mkdir -p .qa-reports/screenshots
+git status --porcelain
 ```
 
----
+If the output is non-empty (working tree is dirty), **STOP** and use AskUserQuestion:
+
+"Your working tree has uncommitted changes. /qa needs a clean tree so each bug fix gets its own atomic commit."
+
+- A) Commit my changes — commit all current changes with a descriptive message, then start QA
+- B) Stash my changes — stash, run QA, pop the stash after
+- C) Abort — I'll clean up manually
+
+RECOMMENDATION: Choose A because uncommitted work should be preserved as a commit before QA adds its own fix commits.
+
+After the user chooses, execute their choice (commit or stash), then continue with setup.
+
+**Find the browse binary:**
 
 ## Test Plan Context
 
 Before falling back to git diff heuristics, check for richer test plan sources:
 
-1. **Conversation context:** Check if a prior `/plan-eng-review` or `/plan-ceo-review` produced test plan output in this conversation
-2. **Use whichever source is richer.** Fall back to git diff analysis only if not available.
+1. **Project-scoped test plans:** Check `~/.gstack/projects/` for recent `*-test-plan-*.md` files for this repo
+   ```bash
+   source <(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)
+   ls -t ~/.gstack/projects/$SLUG/*-test-plan-*.md 2>/dev/null | head -1
+   ```
+2. **Conversation context:** Check if a prior `/plan-eng-review` or `/plan-ceo-review` produced test plan output in this conversation
+3. **Use whichever source is richer.** Fall back to git diff analysis only if neither is available.
 
 ---
+
+## Phases 1-6: QA Baseline
 
 ## Modes
 
@@ -216,16 +265,16 @@ This is the **primary mode** for developers verifying their work. When the user 
    - View/template/component files → which pages render them
    - Model/service files → which pages use those models (check controllers that reference them)
    - CSS/style files → which pages include those stylesheets
-   - API endpoints → test them directly with `agent-browser eval "await fetch('/api/...').then(r=>r.text())"`
+   - API endpoints → test them directly with `agent-browser eval "await fetch('/api/...')"`
    - Static pages (markdown, HTML) → navigate to them directly
+
+   **If no obvious pages/routes are identified from the diff:** Do not skip browser testing. The user invoked /qa because they want browser-based verification. Fall back to Quick mode — navigate to the homepage, follow the top 5 navigation targets, check console for errors, and test any interactive elements found. Backend, config, and infrastructure changes affect app behavior — always verify the app still works.
 
 3. **Detect the running app** — check common local dev ports:
    ```bash
-   curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null && echo "Found app on :3000" || \
-   curl -s -o /dev/null -w "%{http_code}" http://localhost:4000 2>/dev/null && echo "Found app on :4000" || \
-   curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 2>/dev/null && echo "Found app on :5173" || \
-   curl -s -o /dev/null -w "%{http_code}" http://localhost:4321 2>/dev/null && echo "Found app on :4321" || \
-   curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 2>/dev/null && echo "Found app on :8080"
+   agent-browser open http://localhost:3000 2>/dev/null && echo "Found app on :3000" || \
+   agent-browser open http://localhost:4000 2>/dev/null && echo "Found app on :4000" || \
+   agent-browser open http://localhost:8080 2>/dev/null && echo "Found app on :8080"
    ```
    If no local app is found, check for a staging/preview URL in the PR or environment. If nothing works, ask the user for the URL.
 
@@ -234,7 +283,7 @@ This is the **primary mode** for developers verifying their work. When the user 
    - Take a screenshot
    - Check console for errors
    - If the change was interactive (forms, buttons, flows), test the interaction end-to-end
-   - Take snapshots before and after actions to verify the change had the expected effect
+   - Use `snapshot -D` before and after actions to verify the change had the expected effect
 
 5. **Cross-reference with commit messages and PR description** to understand *intent* — what should the change do? Verify it actually does that.
 
@@ -256,56 +305,50 @@ Systematic exploration. Visit every reachable page. Document 5-10 well-evidenced
 ### Regression (`--regression <baseline>`)
 Run full mode, then load `baseline.json` from a previous run. Diff: which issues are fixed? Which are new? What's the score delta? Append regression section to report.
 
-### Report-only (`--report-only`)
-Same as full mode but never fix anything. Do not edit code, do not make commits. Output only the report for handing off to a team.
-
 ---
 
 ## Workflow
 
 ### Phase 1: Initialize
 
-1. Check agent-browser is available (see Setup check above)
+1. Find browse binary (see Setup above)
 2. Create output directories
-3. Start timer for duration tracking
+3. Copy report template from `qa/templates/qa-report-template.md` to output dir
+4. Start timer for duration tracking
 
 ### Phase 2: Authenticate (if needed)
 
 **If the user specified auth credentials:**
 
 ```bash
-agent-browser --session qa open <login-url>
-agent-browser --session qa snapshot           # find the login form
-agent-browser --session qa fill e3 "user@example.com"
-agent-browser --session qa fill e4 "[REDACTED]"    # NEVER include real passwords in report
-agent-browser --session qa click e5                 # submit
-agent-browser --session qa snapshot                 # verify login succeeded
+agent-browser open <login-url>
+agent-browser snapshot -i                    # find the login form
+agent-browser fill e3 "user@example.com"
+agent-browser fill e4 "[REDACTED]"         # NEVER include real passwords in report
+agent-browser click e5                      # submit
+agent-browser diff snapshot                    # verify login succeeded
+```
+
+**If the user provided a cookie file:**
+
+```bash
+agent-browser state load cookies.json
+agent-browser open <target-url>
 ```
 
 **If 2FA/OTP is required:** Ask the user for the code and wait.
 
 **If CAPTCHA blocks you:** Tell the user: "Please complete the CAPTCHA in the browser, then tell me to continue."
 
-Use `--session qa` for all commands so cookies persist across the entire QA run.
-
-**To persist auth for future runs:**
-```bash
-agent-browser --session qa state save .qa-reports/auth-state.json
-# Restore later:
-agent-browser --session qa state load .qa-reports/auth-state.json
-```
-
 ### Phase 3: Orient
 
 Get a map of the application:
 
 ```bash
-agent-browser --session qa open <target-url>
-agent-browser --session qa wait --load networkidle
-agent-browser --session qa screenshot
-agent-browser --session qa snapshot -i -c
-agent-browser --session qa eval "JSON.stringify([...document.querySelectorAll('a[href]')].map(a=>({text:a.textContent.trim(),href:a.href})))"
-agent-browser --session qa console error
+agent-browser open <target-url>
+agent-browser screenshot --annotate "$REPORT_DIR/screenshots/initial.png"
+$B links                          # map navigation structure
+agent-browser console error               # any errors on landing?
 ```
 
 **Detect framework** (note in report metadata):
@@ -314,24 +357,21 @@ agent-browser --session qa console error
 - `wp-content` in URLs → WordPress
 - Client-side routing with no page reloads → SPA
 
-**For SPAs:** The links eval may return few results because navigation is client-side. Use `snapshot` to find nav elements (buttons, menu items) instead.
+**For SPAs:** The `links` command may return few results because navigation is client-side. Use `snapshot -i` to find nav elements (buttons, menu items) instead.
 
 ### Phase 4: Explore
 
 Visit pages systematically. At each page:
 
 ```bash
-agent-browser --session qa open <page-url>
-agent-browser --session qa wait --load networkidle
-agent-browser --session qa screenshot
-agent-browser --session qa snapshot -i -c
-agent-browser --session qa console error
-agent-browser --session qa errors
+agent-browser open <page-url>
+agent-browser screenshot --annotate "$REPORT_DIR/screenshots/page-name.png"
+agent-browser console error
 ```
 
-Then follow the **per-page exploration checklist** (see references/issue-taxonomy.md):
+Then follow the **per-page exploration checklist** (see `qa/references/issue-taxonomy.md`):
 
-1. **Visual scan** — Look at the screenshot for layout issues
+1. **Visual scan** — Look at the annotated screenshot for layout issues
 2. **Interactive elements** — Click buttons, links, controls. Do they work?
 3. **Forms** — Fill and submit. Test empty, invalid, edge cases
 4. **Navigation** — Check all paths in and out
@@ -339,9 +379,9 @@ Then follow the **per-page exploration checklist** (see references/issue-taxonom
 6. **Console** — Any new JS errors after interactions?
 7. **Responsiveness** — Check mobile viewport if relevant:
    ```bash
-   agent-browser --session qa set viewport 375 812
-   agent-browser --session qa screenshot
-   agent-browser --session qa set viewport 1280 720
+   agent-browser set viewport 375 812
+   agent-browser screenshot "$REPORT_DIR/screenshots/page-mobile.png"
+   agent-browser set viewport 1280 720
    ```
 
 **Depth judgment:** Spend more time on core features (homepage, dashboard, checkout, search) and less on secondary pages (about, terms, privacy).
@@ -358,21 +398,25 @@ Document each issue **immediately when found** — don't batch them.
 1. Take a screenshot before the action
 2. Perform the action
 3. Take a screenshot showing the result
-4. Take a new snapshot to compare what changed
+4. Use `snapshot -D` to show what changed
 5. Write repro steps referencing screenshots
 
 ```bash
-agent-browser --session qa screenshot    # before
-agent-browser --session qa click e5
-agent-browser --session qa screenshot    # after
-agent-browser --session qa snapshot      # verify DOM state
+agent-browser screenshot "$REPORT_DIR/screenshots/issue-001-step-1.png"
+agent-browser click e5
+agent-browser screenshot "$REPORT_DIR/screenshots/issue-001-result.png"
+agent-browser diff snapshot
 ```
 
 **Static bugs** (typos, layout issues, missing images):
-1. Take a screenshot showing the problem
+1. Take a single annotated screenshot showing the problem
 2. Describe what's wrong
 
-**Write each issue to the report immediately** using the report template format.
+```bash
+agent-browser screenshot --annotate "$REPORT_DIR/screenshots/issue-002.png"
+```
+
+**Write each issue to the report immediately** using the template format from `qa/templates/qa-report-template.md`.
 
 ### Phase 6: Wrap Up
 
@@ -388,7 +432,7 @@ agent-browser --session qa snapshot      # verify DOM state
      "url": "<target>",
      "healthScore": N,
      "issues": [{ "id": "ISSUE-001", "title": "...", "severity": "...", "category": "..." }],
-     "categoryScores": { "console": N, "links": N, "visual": N, "functional": N, "ux": N, "performance": N, "content": N, "accessibility": N }
+     "categoryScores": { "console": N, "links": N, ... }
    }
    ```
 
@@ -397,8 +441,6 @@ agent-browser --session qa snapshot      # verify DOM state
 - Issues fixed (in baseline but not current)
 - New issues (in current but not baseline)
 - Append the regression section to the report
-
-Record baseline health score at end of Phase 6.
 
 ---
 
@@ -446,7 +488,7 @@ Minimum 0 per category.
 ### Next.js
 - Check console for hydration errors (`Hydration failed`, `Text content did not match`)
 - Monitor `_next/data` requests in network — 404s indicate broken data fetching
-- Test client-side navigation (click links, don't just navigate) — catches routing issues
+- Test client-side navigation (click links, don't just `goto`) — catches routing issues
 - Check for CLS (Cumulative Layout Shift) on pages with dynamic content
 
 ### Rails
@@ -462,16 +504,48 @@ Minimum 0 per category.
 - Check for mixed content warnings (common with WP)
 
 ### General SPA (React, Vue, Angular)
-- Use `snapshot` for navigation — links eval misses client-side routes
+- Use `snapshot -i` for navigation — `links` command misses client-side routes
 - Check for stale state (navigate away and back — does data refresh?)
 - Test browser back/forward — does the app handle history correctly?
 - Check for memory leaks (monitor console after extended use)
 
-### Astro / Starlight
-- Check islands hydrate correctly — interactive components should work after page load
-- Test view transitions if enabled — navigation should be smooth
-- Verify SSR/SSG content matches client-side hydration
-- Check that content collections render without errors
+---
+
+## Important Rules
+
+1. **Repro is everything.** Every issue needs at least one screenshot. No exceptions.
+2. **Verify before documenting.** Retry the issue once to confirm it's reproducible, not a fluke.
+3. **Never include credentials.** Write `[REDACTED]` for passwords in repro steps.
+4. **Write incrementally.** Append each issue to the report as you find it. Don't batch.
+5. **Never read source code.** Test as a user, not a developer.
+6. **Check console after every interaction.** JS errors that don't surface visually are still bugs.
+7. **Test like a user.** Use realistic data. Walk through complete workflows end-to-end.
+8. **Depth over breadth.** 5-10 well-documented issues with evidence > 20 vague descriptions.
+9. **Never delete output files.** Screenshots and reports accumulate — that's intentional.
+10. **Use `snapshot -C` for tricky UIs.** Finds clickable divs that the accessibility tree misses.
+11. **Show screenshots to the user.** After every `agent-browser screenshot`, `agent-browser snapshot -a -o`, or `agent-browser responsive` command, use the Read tool on the output file(s) so the user can see them inline. For `responsive` (3 files), Read all three. This is critical — without it, screenshots are invisible to the user.
+12. **Never refuse to use the browser.** When the user invokes /qa or /qa-only, they are requesting browser-based testing. Never suggest evals, unit tests, or other alternatives as a substitute. Even if the diff appears to have no UI changes, backend changes affect app behavior — always open the browser and test.
+
+Record baseline health score at end of Phase 6.
+
+---
+
+## Output Structure
+
+```
+.gstack/qa-reports/
+├── qa-report-{domain}-{YYYY-MM-DD}.md    # Structured report
+├── screenshots/
+│   ├── initial.png                        # Landing page annotated screenshot
+│   ├── issue-001-step-1.png               # Per-issue evidence
+│   ├── issue-001-result.png
+│   ├── issue-001-before.png               # Before fix (if fixed)
+│   ├── issue-001-after.png                # After fix (if fixed)
+│   └── ...
+└── baseline.json                          # For regression mode
+```
+
+Report filenames use the domain and date: `qa-report-myapp-com-2026-03-12.md`
 
 ---
 
@@ -522,15 +596,13 @@ git commit -m "fix(qa): ISSUE-NNN — short description"
 - Navigate back to the affected page
 - Take **before/after screenshot pair**
 - Check console for errors
-- Take a new snapshot to verify the change had the expected effect
+- Use `snapshot -D` to verify the change had the expected effect
 
 ```bash
-agent-browser --session qa open <affected-url>
-agent-browser --session qa wait --load networkidle
-agent-browser --session qa screenshot
-agent-browser --session qa console error
-agent-browser --session qa errors
-agent-browser --session qa snapshot
+agent-browser open <affected-url>
+agent-browser screenshot "$REPORT_DIR/screenshots/issue-NNN-after.png"
+agent-browser console error
+agent-browser diff snapshot
 ```
 
 ### 8e. Classify
@@ -538,6 +610,59 @@ agent-browser --session qa snapshot
 - **verified**: re-test confirms the fix works, no new errors introduced
 - **best-effort**: fix applied but couldn't fully verify (e.g., needs auth state, external service)
 - **reverted**: regression detected → `git revert HEAD` → mark issue as "deferred"
+
+### 8e.5. Regression Test
+
+Skip if: classification is not "verified", OR the fix is purely visual/CSS with no JS behavior, OR no test framework was detected AND user declined bootstrap.
+
+**1. Study the project's existing test patterns:**
+
+Read 2-3 test files closest to the fix (same directory, same code type). Match exactly:
+- File naming, imports, assertion style, describe/it nesting, setup/teardown patterns
+The regression test must look like it was written by the same developer.
+
+**2. Trace the bug's codepath, then write a regression test:**
+
+Before writing the test, trace the data flow through the code you just fixed:
+- What input/state triggered the bug? (the exact precondition)
+- What codepath did it follow? (which branches, which function calls)
+- Where did it break? (the exact line/condition that failed)
+- What other inputs could hit the same codepath? (edge cases around the fix)
+
+The test MUST:
+- Set up the precondition that triggered the bug (the exact state that made it break)
+- Perform the action that exposed the bug
+- Assert the correct behavior (NOT "it renders" or "it doesn't throw")
+- If you found adjacent edge cases while tracing, test those too (e.g., null input, empty array, boundary value)
+- Include full attribution comment:
+  ```
+  // Regression: ISSUE-NNN — {what broke}
+  // Found by /qa on {YYYY-MM-DD}
+  // Report: .gstack/qa-reports/qa-report-{domain}-{date}.md
+  ```
+
+Test type decision:
+- Console error / JS exception / logic bug → unit or integration test
+- Broken form / API failure / data flow bug → integration test with request/response
+- Visual bug with JS behavior (broken dropdown, animation) → component test
+- Pure CSS → skip (caught by QA reruns)
+
+Generate unit tests. Mock all external dependencies (DB, API, Redis, file system).
+
+Use auto-incrementing names to avoid collisions: check existing `{name}.regression-*.test.{ext}` files, take max number + 1.
+
+**3. Run only the new test file:**
+
+```bash
+{detected test command} {new-test-file}
+```
+
+**4. Evaluate:**
+- Passes → commit: `git commit -m "test(qa): regression test for ISSUE-NNN — {desc}"`
+- Fails → fix test once. Still failing → delete test, defer.
+- Taking >2 min exploration → skip and defer.
+
+**5. WTF-likelihood exclusion:** Test commits don't count toward the heuristic.
 
 ### 8f. Self-Regulation (STOP AND EVALUATE)
 
@@ -571,9 +696,15 @@ After all fixes are applied:
 
 ## Phase 10: Report
 
-Write the report to `.qa-reports/qa-report-{domain}-{YYYY-MM-DD}.md`
+Write the report to both local and project-scoped locations:
 
-Use the report template format (see references/qa-report-template.md).
+**Local:** `.gstack/qa-reports/qa-report-{domain}-{YYYY-MM-DD}.md`
+
+**Project-scoped:** Write test outcome artifact for cross-session context:
+```bash
+source <(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null) && mkdir -p ~/.gstack/projects/$SLUG
+```
+Write to `~/.gstack/projects/{slug}/{user}-{branch}-test-outcome-{datetime}.md`
 
 **Per-issue additions** (beyond standard report template):
 - Fix Status: verified / best-effort / reverted / deferred
@@ -601,43 +732,11 @@ If the repo has a `TODOS.md`:
 
 ---
 
-## Output Structure
-
-```
-.qa-reports/
-├── qa-report-{domain}-{YYYY-MM-DD}.md    # Structured report
-├── screenshots/
-│   ├── initial.png                        # Landing page screenshot
-│   ├── issue-001-step-1.png               # Per-issue evidence
-│   ├── issue-001-result.png
-│   ├── issue-001-before.png               # Before fix (if fixed)
-│   ├── issue-001-after.png                # After fix (if fixed)
-│   └── ...
-├── auth-state.json                        # Saved auth state (if authenticated)
-└── baseline.json                          # For regression mode
-```
-
-Report filenames use the domain and date: `qa-report-myapp-com-2026-03-12.md`
-
----
-
-## Important Rules
-
-1. **Repro is everything.** Every issue needs at least one screenshot. No exceptions.
-2. **Verify before documenting.** Retry the issue once to confirm it's reproducible, not a fluke.
-3. **Never include credentials.** Write `[REDACTED]` for passwords in repro steps.
-4. **Write incrementally.** Append each issue to the report as you find it. Don't batch.
-5. **Never read source code during testing.** Test as a user, not a developer.
-6. **Check console after every interaction.** JS errors that don't surface visually are still bugs.
-7. **Test like a user.** Use realistic data. Walk through complete workflows end-to-end.
-8. **Depth over breadth.** 5-10 well-documented issues with evidence > 20 vague descriptions.
-9. **Never delete output files.** Screenshots and reports accumulate — that's intentional.
-10. **Snapshot before every interaction.** Refs go stale after DOM changes — always re-snapshot.
-
 ## Additional Rules (qa-specific)
 
-11. **Clean working tree required.** Refuse to start if `git status --porcelain` is non-empty.
+11. **Clean working tree required.** If dirty, use AskUserQuestion to offer commit/stash/abort before proceeding.
 12. **One commit per fix.** Never bundle multiple fixes into one commit.
-13. **Never modify tests or CI configuration.** Only fix application source code.
+13. **Only modify tests when generating regression tests in Phase 8e.5.** Never modify CI configuration. Never modify existing tests — only create new test files.
 14. **Revert on regression.** If a fix makes things worse, `git revert HEAD` immediately.
 15. **Self-regulate.** Follow the WTF-likelihood heuristic. When in doubt, stop and ask.
+
