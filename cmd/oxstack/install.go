@@ -59,8 +59,11 @@ func cmdInstall() {
 	// --- Step 9: Remove browser-dependent symlinks ---
 	removeBrowserSymlinks()
 
+	// --- Step 10: Symlink CLAUDE.md ---
+	installClaudeMd(root)
+
 	fmt.Println()
-	infof("Done. All skills, agents, guidelines, and MCP servers installed.")
+	infof("Done. All skills, agents, guidelines, CLAUDE.md, and MCP servers installed.")
 	printPostInstallSummary()
 }
 
@@ -366,6 +369,23 @@ func installByOxSkills(root string) {
 	os.MkdirAll(drByOx, 0o755)
 	copyFile(filepath.Join(gstackAbDir, "design-review", "SKILL.md"), filepath.Join(drByOx, "SKILL.md"))
 	infof("  Installed: /design-review-byOx")
+}
+
+func installClaudeMd(root string) {
+	fmt.Println()
+	src := filepath.Join(root, "CLAUDE.md")
+	if !fileExists(src) {
+		warnf("No CLAUDE.md found in repo root — skipping")
+		return
+	}
+	claudeDir := filepath.Join(homeDir(), ".claude")
+	os.MkdirAll(claudeDir, 0o755)
+	dst := filepath.Join(claudeDir, "CLAUDE.md")
+	if err := symlink(src, dst); err != nil {
+		errorf("CLAUDE.md → %s: %v", dst, err)
+	} else {
+		infof("CLAUDE.md → %s", dst)
+	}
 }
 
 func removeBrowserSymlinks() {

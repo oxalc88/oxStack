@@ -42,6 +42,9 @@ func cmdUninstall() {
 	// --- Step 6: Remove -byOx skills ---
 	removeByOxSkills()
 
+	// --- Step 7: Remove CLAUDE.md symlink ---
+	removeClaudeMdSymlink(root)
+
 	fmt.Println()
 	infof("Done. All oxStack links, generated files, and MCP servers removed.")
 }
@@ -194,6 +197,14 @@ func removeMCPFromCodex() {
 	trimmed := strings.TrimRight(content[:idx], "\n") + "\n"
 	os.WriteFile(codexConfig, []byte(trimmed), 0o644)
 	infof("Removed MCP servers from %s", codexConfig)
+}
+
+func removeClaudeMdSymlink(root string) {
+	src := filepath.Join(root, "CLAUDE.md")
+	dst := filepath.Join(homeDir(), ".claude", "CLAUDE.md")
+	if removeOurSymlink(dst, src) {
+		infof("Removed CLAUDE.md symlink %s", dst)
+	}
 }
 
 func removeByOxSkills() {
