@@ -103,8 +103,9 @@ Deployed to `~/.claude/agents/`:
 | Agent | Model | Description |
 |-------|-------|-------------|
 | **git-committer** | haiku | Commits changes with Conventional Commits format |
-| **tdd-specialist** | sonnet | Test-writing specialist with red-green-refactor workflow |
-| **test-reviewer** | sonnet | Test quality reviewer (GOOD/NOISY/FRAGILE/WRONG classification) |
+| **tdd-specialist** | sonnet | Writes new behavior-focused tests via red-green-refactor. Produces `test-findings.md`. |
+| **test-fixer** | sonnet | Rewrites flagged tests from `test-review-findings.md`. Never writes new tests. |
+| **test-reviewer** | sonnet | Evaluates existing test quality (GOOD/NOISY/FRAGILE/WRONG). Produces `test-review-findings.md`. |
 
 ### gstack + agent-browser Skills
 
