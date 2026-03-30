@@ -5,11 +5,11 @@ description: >
   break after refactors without behavior changes, when migrating or improving
   a test suite, or when the user asks to "review tests", "evaluate tests",
   "check test quality", or "why do these tests break on refactor".
-  Does NOT write or rewrite tests — use tdd-specialist for that.
+  Does NOT write or rewrite tests — use tdd-specialist for new tests, test-fixer for rewrites.
 tools: Read, Grep, Glob, Bash, Write
 model: sonnet
 memory: project
-skills: testing-principles
+skills: tdd
 color: yellow
 ---
 
