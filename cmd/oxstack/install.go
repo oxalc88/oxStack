@@ -290,6 +290,8 @@ func installGstack() {
 
 	if dirExists(gstack) {
 		warnf("gstack already exists at %s — pulling latest", gstack)
+		// Discard local changes to compiled binaries so the pull is never blocked.
+		runDir(gstack, "git", "checkout", "--", "bin/")
 		if out, err := runDir(gstack, "git", "pull", "--ff-only"); err != nil {
 			warnf("Could not pull gstack: %s", strings.TrimSpace(out))
 		}
