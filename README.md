@@ -128,7 +128,7 @@ Installed automatically by `oxstack install`. Clones [gstack](https://github.com
 
 ### Third-party Skills
 
-Installed automatically by `oxstack install`:
+Installed automatically by `oxstack install`. Defined in `oxstack.toml` under `[skills.external]` — add a one-line entry to track a new skill; no code changes or rebuilds needed.
 
 | Skill | Source |
 |-------|--------|
@@ -145,7 +145,7 @@ Installed automatically by `oxstack install`:
 
 ### MCP Servers
 
-Merged into `~/.claude/settings.json` and appended to `~/.codex/config.toml`:
+Defined in `oxstack.toml` under `[mcp.servers.*]`. Merged into `~/.claude/settings.json` and appended to `~/.codex/config.toml` by `oxstack install`.
 
 | Server | Description |
 |--------|-------------|
@@ -157,7 +157,7 @@ Merged into `~/.claude/settings.json` and appended to `~/.codex/config.toml`:
 | **ultracite** | Ultracite remote MCP |
 | **powertools** | AWS Lambda Powertools MCP |
 
-Servers needing env vars use values from `.env` (see `.env.example`). The `disabled` field in `mcp/claude.json` propagates on `oxstack install` — set it to `true` for servers you want off by default on new machines. Use `oxstack pull-config` to capture toggled state back from your live settings.
+Servers needing env vars use values from `.env` (see `.env.example`). Set `disabled = true` in `oxstack.toml` for servers you want off by default on new machines. Use `oxstack pull-config` to capture toggled state back from your live settings.
 
 ### Development Guidelines
 
