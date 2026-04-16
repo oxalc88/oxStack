@@ -44,6 +44,16 @@ Checks gstack for upstream changes to forked skills (qa, design-review). Pulls l
 oxstack sync
 ```
 
+### `oxstack pull-config`
+
+Syncs MCP `disabled` flags from your live `~/.claude/settings.json` back into `oxStack/mcp/claude.json` so the state is preserved for new machines. Shows a per-server diff and prompts before writing.
+
+```bash
+oxstack pull-config
+```
+
+Refuses to run if `mcp/claude.json` has uncommitted changes. Only touches the `disabled` field — never writes env-substituted values or permissions back to the repo.
+
 ### `oxstack update`
 
 Regenerates -byOx skills from gstack's latest SKILL.md. For each forked skill it:
@@ -131,6 +141,7 @@ Installed automatically by `oxstack install`:
 | **seo** | Addy Osmani — search engine optimization |
 | **web-quality-audit** | Addy Osmani — Lighthouse audit |
 | **tdd** | Matt Pocock — test-driven development |
+| **ast-grep** | ast-grep — AST-based structural code search |
 
 ### MCP Servers
 
@@ -146,7 +157,7 @@ Merged into `~/.claude/settings.json` and appended to `~/.codex/config.toml`:
 | **ultracite** | Ultracite remote MCP |
 | **powertools** | AWS Lambda Powertools MCP |
 
-Servers needing env vars use values from `.env` (see `.env.example`).
+Servers needing env vars use values from `.env` (see `.env.example`). The `disabled` field in `mcp/claude.json` propagates on `oxstack install` — set it to `true` for servers you want off by default on new machines. Use `oxstack pull-config` to capture toggled state back from your live settings.
 
 ### Development Guidelines
 
@@ -155,10 +166,11 @@ Generated to `~/.codex/AGENTS.md` and `~/.opencode/AGENTS.md`. Shared developmen
 ## Workflow
 
 ```
-oxstack install     # First time setup (or after adding new skills/agents)
-oxstack sync        # After gstack updates — review methodology changes
-oxstack update      # Apply gstack methodology changes to -byOx skills
-oxstack uninstall   # Remove all symlinks, generated files, and MCP servers
+oxstack install      # First time setup (or after adding new skills/agents)
+oxstack sync         # After gstack updates — review methodology changes
+oxstack update       # Apply gstack methodology changes to -byOx skills
+oxstack pull-config  # Capture MCP disabled toggles back into mcp/claude.json
+oxstack uninstall    # Remove all symlinks, generated files, and MCP servers
 ```
 
 Edit skills and agents directly in this repo. Changes are reflected immediately through symlinks — no reinstall needed. Only re-run `oxstack install` when adding new skills/agents or regenerating guideline files.
