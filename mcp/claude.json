@@ -3,6 +3,7 @@
     "awslabs.aws-diagram-mcp-server": {
       "command": "uvx",
       "args": ["awslabs.aws-diagram-mcp-server"],
+      "disabled": true,
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       }
@@ -10,6 +11,7 @@
     "awslabs.aws-documentation-mcp-server": {
       "command": "uvx",
       "args": ["awslabs.aws-documentation-mcp-server@latest"],
+      "disabled": true,
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       }
@@ -17,6 +19,7 @@
     "awslabs.aws-pricing-mcp-server": {
       "command": "uvx",
       "args": ["awslabs.aws-pricing-mcp-server@latest"],
+      "disabled": true,
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       }
@@ -24,6 +27,7 @@
     "awslabs.cfn-mcp-server": {
       "command": "uvx",
       "args": ["awslabs.cfn-mcp-server@latest", "--readonly"],
+      "disabled": true,
       "env": {
         "AWS_PROFILE": "$AWS_PROFILE"
       }
