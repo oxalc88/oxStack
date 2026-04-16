@@ -21,6 +21,7 @@ var thirdPartySkills = []struct{ args, name string }{
 	{"AdeelMufti/addyo-skill-seo --skill seo", "seo"},
 	{"AdeelMufti/addyo-skill-web-quality-audit --skill web-quality-audit", "web-quality-audit"},
 	{"mattpocock/tdd --skill tdd", "tdd"},
+	{"ast-grep/agent-skill --skill ast-grep", "ast-grep"},
 }
 
 // Skills that gstack installs but we replace with agent-browser versions.
@@ -426,8 +427,9 @@ func printPostInstallSummary() {
 	fmt.Println("      /seo                  — Search engine optimization (Addy Osmani)")
 	fmt.Println("      /web-quality-audit    — Lighthouse audit (Addy Osmani)")
 	fmt.Println("      /tdd                  — Test-driven development (Matt Pocock)")
+	fmt.Println("      /ast-grep             — AST-based structural code search (ast-grep)")
 	fmt.Println()
-	fmt.Println("    CLI: oxstack install | oxstack sync | oxstack update")
+	fmt.Println("    CLI: oxstack install | oxstack sync | oxstack update | oxstack pull-config")
 	fmt.Println()
 	fmt.Println("  Run 'oxstack sync' after gstack updates to review changes to forked skills")
 }
