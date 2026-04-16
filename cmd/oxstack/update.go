@@ -39,7 +39,7 @@ func cmdUpdate() {
 	skillsDir := claudeSkillsDir()
 	anyUpdated := false
 
-	for _, skill := range forkedSkills {
+	for _, skill := range loadConfig().Gstack.ForkedSkills {
 		fmt.Printf(bold+"--- %s ---"+reset+"\n", skill)
 
 		// a. Read gstack's current SKILL.md

@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-var forkedSkills = []string{"qa", "design-review"}
-
 func cmdSync() {
 	fmt.Printf(bold+"oxstack sync"+reset+" — checking gstack for updates to forked skills\n\n")
 
@@ -64,7 +62,7 @@ func cmdSync() {
 
 	// Diff each forked skill (methodology only — strips boilerplate)
 	changesFound := false
-	for _, skill := range forkedSkills {
+	for _, skill := range loadConfig().Gstack.ForkedSkills {
 		gstackFile := fmt.Sprintf("%s/%s/SKILL.md", gstack, skill)
 		if !fileExists(gstackFile) {
 			warnf("%s: not found in gstack (skipping)", skill)

@@ -8,16 +8,6 @@ import (
 	"strings"
 )
 
-// mcpServerKeys lists the keys we add to settings.json mcpServers.
-var mcpServerKeys = []string{
-	"awslabs.aws-diagram-mcp-server",
-	"awslabs.aws-documentation-mcp-server",
-	"awslabs.aws-pricing-mcp-server",
-	"awslabs.cfn-mcp-server",
-	"serverless",
-	"ultracite",
-	"powertools",
-}
 
 func cmdUninstall() {
 	fmt.Printf(bold+"oxstack uninstall"+reset+" — remove all oxStack symlinks, generated files, and MCP servers\n\n")
@@ -154,8 +144,9 @@ func removeMCPFromClaude() {
 		return
 	}
 
+	cfg := loadConfig()
 	removed := 0
-	for _, key := range mcpServerKeys {
+	for key := range cfg.MCP.Servers {
 		if _, exists := mcpServers[key]; exists {
 			delete(mcpServers, key)
 			removed++
