@@ -32,6 +32,8 @@ func main() {
 		cmdSync()
 	case "update":
 		cmdUpdate()
+	case "pull-config":
+		cmdPullConfig()
 	case "uninstall":
 		cmdUninstall()
 	case "help", "--help", "-h":
@@ -50,11 +52,12 @@ func cmdHelp() {
 	fmt.Println("Usage: oxstack <command>")
 	fmt.Println()
 	fmt.Println("Commands:")
-	fmt.Println("  install     Run the full oxStack installer (skills, agents, MCP, gstack)")
-	fmt.Println("  sync        Check gstack for updates to forked skills (qa, design-review)")
-	fmt.Println("  update      Regenerate -byOx skills from gstack's latest methodology")
-	fmt.Println("  uninstall   Remove all symlinks, generated files, and MCP servers")
-	fmt.Println("  help        Show this help message")
+	fmt.Println("  install      Run the full oxStack installer (skills, agents, MCP, gstack)")
+	fmt.Println("  sync         Check gstack for updates to forked skills (qa, design-review)")
+	fmt.Println("  update       Regenerate -byOx skills from gstack's latest methodology")
+	fmt.Println("  pull-config  Sync MCP disabled flags from ~/.claude/settings.json → mcp/claude.json")
+	fmt.Println("  uninstall    Remove all symlinks, generated files, and MCP servers")
+	fmt.Println("  help         Show this help message")
 	fmt.Println()
 	fmt.Printf("Repo: %s\n", repoRoot())
 }
