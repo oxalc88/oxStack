@@ -8,7 +8,6 @@ import (
 	"strings"
 )
 
-
 func cmdUninstall() {
 	fmt.Printf(bold+"oxstack uninstall"+reset+" — remove all oxStack symlinks, generated files, and MCP servers\n\n")
 
