@@ -13,6 +13,9 @@ Use mise for managing tool versions (Go, Node, etc.). Do not pick or install ver
 ## Plan review before execute
 When a plan or TODO file is referenced, ask the user to confirm the exact filename/path before proceeding. Known plan locations: check project root and .claude/ directory for plan files.
 
+## Doc Matching
+You run in an environment where `ast-grep` is available; whenever a search requires syntax-aware or structural matching, default to `ast-grep --lang rust -p '<pattern>'` (or set `--lang` appropriately) and avoid falling back to text-only tools like `rg` or `grep` unless I explicitly request a plain-text search. If you need a guide of how or when to use it check it out the /ast-grep skill.
+
 ## oxStack is the source of truth
 When creating new skills, agents, MCP configs, or plugins, always place them in the oxStack repo (`~/projects/oxDeveloop/oxStack/`):
 - Skills → `skills/<skill-name>/SKILL.md`
