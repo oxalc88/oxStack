@@ -18,12 +18,11 @@ func cmdPullConfig() {
 	tomlPath := filepath.Join(root, "oxstack.toml")
 
 	// Safety: refuse if oxstack.toml has uncommitted changes.
-	if out, _ := runSilentDir(root, "git", "diff", "--quiet", "--", "oxstack.toml"); out != "" {
+	if _, err := runSilentDir(root, "git", "diff", "--quiet", "--", "oxstack.toml"); err != nil {
 		errorf("oxstack.toml has uncommitted changes — commit or stash before pulling config")
 		os.Exit(1)
 	}
 
-	// Read live ~/.claude/settings.json
 	liveData, err := os.ReadFile(claudeSettingsPath())
 	if err != nil {
 		errorf("Could not read %s: %v", claudeSettingsPath(), err)
@@ -41,7 +40,17 @@ func cmdPullConfig() {
 		return
 	}
 
-	cfg := loadConfig()
+	// Read oxstack.toml once; parse into typed config (for diff) and raw map (for write-back).
+	rawData, err := os.ReadFile(tomlPath)
+	if err != nil {
+		errorf("Could not read %s: %v", tomlPath, err)
+		os.Exit(1)
+	}
+	var cfg Config
+	if err := toml.Unmarshal(rawData, &cfg); err != nil {
+		errorf("Could not parse oxstack.toml: %v", err)
+		os.Exit(1)
+	}
 
 	// Compute per-server diffs (disabled flag only).
 	type serverDiff struct {
@@ -78,7 +87,6 @@ func cmdPullConfig() {
 		return
 	}
 
-	// Print diff
 	fmt.Printf(bold+"Differences (disabled flags):"+reset+"\n\n")
 	for _, d := range diffs {
 		fmt.Printf("  %s\n", d.name)
@@ -87,7 +95,6 @@ func cmdPullConfig() {
 		fmt.Println()
 	}
 
-	// Prompt
 	fmt.Printf("Apply these changes to oxstack.toml? [y/N] ")
 	reader := bufio.NewReader(os.Stdin)
 	answer, _ := reader.ReadString('\n')
@@ -97,19 +104,13 @@ func cmdPullConfig() {
 		return
 	}
 
-	// Load raw TOML as a generic map to preserve comments and key ordering.
-	rawData, err := os.ReadFile(tomlPath)
-	if err != nil {
-		errorf("Could not read %s: %v", tomlPath, err)
-		os.Exit(1)
-	}
+	// Parse raw map from the already-read bytes to preserve comments and key ordering.
 	var raw map[string]any
 	if err := toml.Unmarshal(rawData, &raw); err != nil {
 		errorf("Could not parse oxstack.toml: %v", err)
 		os.Exit(1)
 	}
 
-	// Navigate to mcp.servers and update disabled flags.
 	mcpSection, _ := raw["mcp"].(map[string]any)
 	if mcpSection == nil {
 		errorf("No [mcp] section found in oxstack.toml")
@@ -134,7 +135,6 @@ func cmdPullConfig() {
 		}
 	}
 
-	// Write back with comment preservation.
 	out, err := toml.Marshal(raw)
 	if err != nil {
 		errorf("Could not marshal oxstack.toml: %v", err)

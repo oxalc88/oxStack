@@ -7,6 +7,8 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
+var cachedConfig *Config
+
 // Config is the typed representation of oxstack.toml.
 type Config struct {
 	Gstack struct {
@@ -26,8 +28,10 @@ type ExternalSkill struct {
 	Skill string `toml:"skill"`
 }
 
-// loadConfig reads and parses oxstack.toml from the repo root.
 func loadConfig() *Config {
+	if cachedConfig != nil {
+		return cachedConfig
+	}
 	path := filepath.Join(repoRoot(), "oxstack.toml")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -39,5 +43,6 @@ func loadConfig() *Config {
 		errorf("Could not parse oxstack.toml: %v", err)
 		os.Exit(1)
 	}
-	return &cfg
+	cachedConfig = &cfg
+	return cachedConfig
 }
