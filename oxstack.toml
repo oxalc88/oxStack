@@ -1,0 +1,61 @@
+# oxstack.toml — single source of truth for portable config.
+# Edit this file to add skills, change MCP servers, or adjust forked skill sources.
+# After editing, run: oxstack install
+
+# Forked gstack skills that -byOx variants regenerate from (used by oxstack sync/update)
+[gstack]
+forked_skills = ["qa", "design-review"]
+
+# Third-party skills installed via `npx skills add <repo> --skill <name>`
+# Key = display name (used in install summary), value = repo + skill name
+[skills.external]
+agent-browser    = { repo = "vercel-labs/agent-browser",                skill = "agent-browser" }
+find-skills      = { repo = "vercel-labs/find-skills",                  skill = "find-skills" }
+accessibility    = { repo = "AdeelMufti/addyo-skill-accessibility",     skill = "accessibility" }
+best-practices   = { repo = "AdeelMufti/addyo-skill-best-practices",    skill = "best-practices" }
+core-web-vitals  = { repo = "AdeelMufti/addyo-skill-core-web-vitals",   skill = "core-web-vitals" }
+performance      = { repo = "AdeelMufti/addyo-skill-performance",       skill = "performance" }
+seo              = { repo = "AdeelMufti/addyo-skill-seo",               skill = "seo" }
+web-quality-audit = { repo = "AdeelMufti/addyo-skill-web-quality-audit", skill = "web-quality-audit" }
+tdd              = { repo = "mattpocock/tdd",                           skill = "tdd" }
+ast-grep         = { repo = "ast-grep/agent-skill",                     skill = "ast-grep" }
+
+# MCP servers merged into ~/.claude/settings.json on oxstack install.
+# disabled = true means the server is installed but off by default.
+# Env vars (e.g. $AWS_PROFILE) are substituted from .env at install time.
+
+[mcp.servers."awslabs.aws-diagram-mcp-server"]
+command  = "uvx"
+args     = ["awslabs.aws-diagram-mcp-server"]
+disabled = true
+env      = { FASTMCP_LOG_LEVEL = "ERROR" }
+
+[mcp.servers."awslabs.aws-documentation-mcp-server"]
+command  = "uvx"
+args     = ["awslabs.aws-documentation-mcp-server@latest"]
+disabled = true
+env      = { FASTMCP_LOG_LEVEL = "ERROR" }
+
+[mcp.servers."awslabs.aws-pricing-mcp-server"]
+command  = "uvx"
+args     = ["awslabs.aws-pricing-mcp-server@latest"]
+disabled = true
+env      = { FASTMCP_LOG_LEVEL = "ERROR" }
+
+[mcp.servers."awslabs.cfn-mcp-server"]
+command  = "uvx"
+args     = ["awslabs.cfn-mcp-server@latest", "--readonly"]
+disabled = true
+env      = { AWS_PROFILE = "$AWS_PROFILE" }
+
+[mcp.servers.serverless]
+command = "serverless"
+args    = ["mcp"]
+
+[mcp.servers.ultracite]
+command = "npx"
+args    = ["-y", "mcp-remote", "https://www.ultracite.ai/api/mcp/mcp"]
+
+[mcp.servers.powertools]
+command = "npx"
+args    = ["-y", "powertools-for-aws-mcp"]
