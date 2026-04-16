@@ -7,17 +7,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 func cmdPullConfig() {
 	fmt.Printf(bold+"oxstack pull-config"+reset+" — sync MCP disabled flags from ~/.claude/settings.json\n\n")
 
 	root := repoRoot()
-	mcpPath := filepath.Join(root, "mcp", "claude.json")
+	tomlPath := filepath.Join(root, "oxstack.toml")
 
-	// Safety: refuse if mcp/claude.json has uncommitted changes.
-	if dirty, _ := runSilentDir(root, "git", "diff", "--quiet", "--", "mcp/claude.json"); dirty != "" {
-		errorf("mcp/claude.json has uncommitted changes — commit or stash before pulling config")
+	// Safety: refuse if oxstack.toml has uncommitted changes.
+	if out, _ := runSilentDir(root, "git", "diff", "--quiet", "--", "oxstack.toml"); out != "" {
+		errorf("oxstack.toml has uncommitted changes — commit or stash before pulling config")
 		os.Exit(1)
 	}
 
@@ -33,48 +35,28 @@ func cmdPullConfig() {
 		os.Exit(1)
 	}
 
-	// Read mcp/claude.json
-	repoData, err := os.ReadFile(mcpPath)
-	if err != nil {
-		errorf("Could not read %s: %v", mcpPath, err)
-		os.Exit(1)
-	}
-	var repoConfig map[string]any
-	if err := json.Unmarshal(repoData, &repoConfig); err != nil {
-		errorf("Could not parse mcp/claude.json: %v", err)
-		os.Exit(1)
-	}
-
 	liveServers, _ := liveSettings["mcpServers"].(map[string]any)
-	repoServers, _ := repoConfig["mcpServers"].(map[string]any)
-
 	if liveServers == nil {
 		infof("No mcpServers in settings.json — nothing to pull")
 		return
 	}
-	if repoServers == nil {
-		errorf("No mcpServers in mcp/claude.json — unexpected")
-		os.Exit(1)
-	}
+
+	cfg := loadConfig()
 
 	// Compute per-server diffs (disabled flag only).
 	type serverDiff struct {
 		name    string
-		repoVal any // current value in repo (nil = absent)
-		liveVal any // current value in live settings (nil = absent)
+		repoVal any
+		liveVal any
 	}
 	var diffs []serverDiff
 
-	for name, repoEntry := range repoServers {
-		repoMap, ok := repoEntry.(map[string]any)
-		if !ok {
-			continue
-		}
-		repoDisabled := repoMap["disabled"]
+	for name, repoServer := range cfg.MCP.Servers {
+		repoDisabled := repoServer["disabled"]
 
 		liveEntry, inLive := liveServers[name]
 		if !inLive {
-			continue // server not yet merged into live settings — skip
+			continue
 		}
 		liveMap, ok := liveEntry.(map[string]any)
 		if !ok {
@@ -82,11 +64,7 @@ func cmdPullConfig() {
 		}
 		liveDisabled := liveMap["disabled"]
 
-		// Normalize: missing key == false
-		repoBool := toBool(repoDisabled)
-		liveBool := toBool(liveDisabled)
-
-		if repoBool != liveBool {
+		if toBool(repoDisabled) != toBool(liveDisabled) {
 			diffs = append(diffs, serverDiff{
 				name:    name,
 				repoVal: repoDisabled,
@@ -96,7 +74,7 @@ func cmdPullConfig() {
 	}
 
 	if len(diffs) == 0 {
-		infof("No changes — mcp/claude.json already matches live settings (disabled flags)")
+		infof("No changes — oxstack.toml already matches live settings (disabled flags)")
 		return
 	}
 
@@ -104,13 +82,13 @@ func cmdPullConfig() {
 	fmt.Printf(bold+"Differences (disabled flags):"+reset+"\n\n")
 	for _, d := range diffs {
 		fmt.Printf("  %s\n", d.name)
-		fmt.Printf(red+"    repo:  disabled = %v"+reset+"\n", boolStr(d.repoVal))
-		fmt.Printf(green+"    live:  disabled = %v"+reset+"\n", boolStr(d.liveVal))
+		fmt.Printf(red+"    toml: disabled = %v"+reset+"\n", boolStr(d.repoVal))
+		fmt.Printf(green+"    live: disabled = %v"+reset+"\n", boolStr(d.liveVal))
 		fmt.Println()
 	}
 
 	// Prompt
-	fmt.Printf("Apply these changes to mcp/claude.json? [y/N] ")
+	fmt.Printf("Apply these changes to oxstack.toml? [y/N] ")
 	reader := bufio.NewReader(os.Stdin)
 	answer, _ := reader.ReadString('\n')
 	answer = strings.TrimSpace(strings.ToLower(answer))
@@ -119,34 +97,56 @@ func cmdPullConfig() {
 		return
 	}
 
-	// Apply: set disabled flag on matching servers in repo config.
+	// Load raw TOML as a generic map to preserve comments and key ordering.
+	rawData, err := os.ReadFile(tomlPath)
+	if err != nil {
+		errorf("Could not read %s: %v", tomlPath, err)
+		os.Exit(1)
+	}
+	var raw map[string]any
+	if err := toml.Unmarshal(rawData, &raw); err != nil {
+		errorf("Could not parse oxstack.toml: %v", err)
+		os.Exit(1)
+	}
+
+	// Navigate to mcp.servers and update disabled flags.
+	mcpSection, _ := raw["mcp"].(map[string]any)
+	if mcpSection == nil {
+		errorf("No [mcp] section found in oxstack.toml")
+		os.Exit(1)
+	}
+	serversSection, _ := mcpSection["servers"].(map[string]any)
+	if serversSection == nil {
+		errorf("No [mcp.servers] section found in oxstack.toml")
+		os.Exit(1)
+	}
+
 	for _, d := range diffs {
-		serverMap, ok := repoServers[d.name].(map[string]any)
-		if !ok {
+		serverEntry, _ := serversSection[d.name].(map[string]any)
+		if serverEntry == nil {
 			continue
 		}
 		live, _ := liveServers[d.name].(map[string]any)
-		liveDisabled := live["disabled"]
-		if liveDisabled == nil || liveDisabled == false {
-			delete(serverMap, "disabled")
+		if toBool(live["disabled"]) {
+			serverEntry["disabled"] = true
 		} else {
-			serverMap["disabled"] = true
+			delete(serverEntry, "disabled")
 		}
 	}
 
-	// Write back mcp/claude.json
-	out, err := json.MarshalIndent(repoConfig, "", "  ")
+	// Write back with comment preservation.
+	out, err := toml.Marshal(raw)
 	if err != nil {
-		errorf("Could not marshal mcp/claude.json: %v", err)
+		errorf("Could not marshal oxstack.toml: %v", err)
 		os.Exit(1)
 	}
-	if err := os.WriteFile(mcpPath, append(out, '\n'), 0o644); err != nil {
-		errorf("Could not write %s: %v", mcpPath, err)
+	if err := os.WriteFile(tomlPath, out, 0o644); err != nil {
+		errorf("Could not write %s: %v", tomlPath, err)
 		os.Exit(1)
 	}
 
-	infof("Updated mcp/claude.json (%d server(s) changed)", len(diffs))
-	fmt.Printf("\n  %s\n", dim+"git diff mcp/claude.json && git add mcp/claude.json && git commit -m 'chore(mcp): sync disabled flags'"+reset)
+	infof("Updated oxstack.toml (%d server(s) changed)", len(diffs))
+	fmt.Printf("\n  %s\n", dim+"git diff oxstack.toml && git add oxstack.toml && git commit -m 'chore(mcp): sync disabled flags'"+reset)
 }
 
 func toBool(v any) bool {
