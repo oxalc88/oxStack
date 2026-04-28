@@ -187,10 +187,7 @@ func installMCP(root string) {
 	}
 
 	// Substitute env vars
-	mcpStr := string(serversJSON)
-	for k, v := range envVars {
-		mcpStr = strings.ReplaceAll(mcpStr, "$"+k, v)
-	}
+	mcpStr := subEnv(string(serversJSON), envVars)
 
 	// Re-parse as map[string]any and wrap in {"mcpServers": ...}
 	var servers map[string]any
@@ -251,7 +248,10 @@ func installCodexMCP(envVars map[string]string) {
 		marker := "# --- oxStack MCP servers ---"
 		if idx := strings.Index(content, marker); idx >= 0 {
 			content = strings.TrimRight(content[:idx], "\n") + "\n"
-			os.WriteFile(codexConfig, []byte(content), 0o644)
+			if err := os.WriteFile(codexConfig, []byte(content), 0o644); err != nil {
+				errorf("Could not strip old MCP block from %s: %v", codexConfig, err)
+				return
+			}
 		}
 	}
 
@@ -277,15 +277,7 @@ func buildCodexTOML(cfg *Config, envVars map[string]string) string {
 		command, _ := server["command"].(string)
 		command = subEnv(command, envVars)
 
-		var args []string
-		if argsAny, ok := server["args"].([]any); ok {
-			for _, a := range argsAny {
-				if s, ok := a.(string); ok {
-					args = append(args, subEnv(s, envVars))
-				}
-			}
-		}
-
+		args := serverArgs(server, envVars)
 		quotedArgs := make([]string, len(args))
 		for i, a := range args {
 			quotedArgs[i] = fmt.Sprintf("%q", a)
@@ -321,7 +313,9 @@ func installOpenCodeMCP(envVars map[string]string) {
 
 	var existing map[string]any
 	if data, err := os.ReadFile(configPath); err == nil {
-		json.Unmarshal(data, &existing)
+		if err := json.Unmarshal(data, &existing); err != nil {
+			warnf("Could not parse %s, will overwrite: %v", configPath, err)
+		}
 	}
 	if existing == nil {
 		existing = map[string]any{"$schema": "https://opencode.ai/config.json"}
@@ -332,9 +326,7 @@ func installOpenCodeMCP(envVars map[string]string) {
 		mcpSection = make(map[string]any)
 		existing["mcp"] = mcpSection
 	}
-	for k, v := range newServers {
-		mcpSection[k] = v
-	}
+	mergeJSON(mcpSection, newServers)
 
 	out, err := json.MarshalIndent(existing, "", "  ")
 	if err != nil {
@@ -352,14 +344,7 @@ func buildOpenCodeMCP(cfg *Config, envVars map[string]string) map[string]any {
 	servers := make(map[string]any)
 	for name, server := range cfg.MCP.Servers {
 		command, _ := server["command"].(string)
-		cmdArray := []string{subEnv(command, envVars)}
-		if argsAny, ok := server["args"].([]any); ok {
-			for _, a := range argsAny {
-				if s, ok := a.(string); ok {
-					cmdArray = append(cmdArray, subEnv(s, envVars))
-				}
-			}
-		}
+		cmdArray := append([]string{subEnv(command, envVars)}, serverArgs(server, envVars)...)
 
 		entry := map[string]any{
 			"type":    "local",
@@ -386,6 +371,20 @@ func subEnv(s string, envVars map[string]string) string {
 		s = strings.ReplaceAll(s, "$"+k, v)
 	}
 	return s
+}
+
+func serverArgs(server map[string]any, envVars map[string]string) []string {
+	argsAny, ok := server["args"].([]any)
+	if !ok {
+		return nil
+	}
+	args := make([]string, 0, len(argsAny))
+	for _, a := range argsAny {
+		if s, ok := a.(string); ok {
+			args = append(args, subEnv(s, envVars))
+		}
+	}
+	return args
 }
 
 func installGstack() {
