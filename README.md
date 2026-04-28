@@ -74,6 +74,57 @@ oxstack update --full   # full unified diff (raw, verbose)
 oxstack help
 ```
 
+## Configuration (oxstack.toml)
+
+`oxstack.toml` is the single source of truth for all runtime configuration. Edit it to add skills, toggle MCP servers, or change which gstack skills are tracked. Run `oxstack install` after any change.
+
+### `[gstack]` — forked skills
+
+Controls which gstack skills `oxstack sync` and `oxstack update` track for upstream changes and regenerate as `-byOx` variants.
+
+```toml
+[gstack]
+forked_skills = ["qa", "design-review"]
+```
+
+### `[skills.external]` — third-party skills
+
+Each entry triggers one `npx skills add <repo> --skill <name>` call during `oxstack install`. To add a new skill, append a line — no code change or rebuild needed.
+
+```toml
+[skills.external]
+tdd        = { repo = "mattpocock/tdd",        skill = "tdd" }
+ast-grep   = { repo = "ast-grep/agent-skill",  skill = "ast-grep" }
+my-skill   = { repo = "owner/repo",            skill = "skill-name" }  # ← add like this
+```
+
+### `[mcp.servers.*]` — MCP servers
+
+Defines MCP servers installed into **Claude** (`~/.claude/settings.json`), **Codex** (`~/.codex/config.toml`), and **OpenCode** (`~/.config/opencode/opencode.json`) — all from this single file.
+
+Fields:
+- `command` / `args` — the server binary and its arguments
+- `env` — environment variables passed to the server process
+- `disabled` — `true` means installed-but-off by default; capture live toggles back with `oxstack pull-config`
+
+`$VAR` placeholders in any string field are substituted from `.env` at install time (see `.env.example`).
+
+```toml
+# Minimal server
+[mcp.servers.serverless]
+command = "serverless"
+args    = ["mcp"]
+
+# Server with env-var substitution and disabled by default
+[mcp.servers."awslabs.cfn-mcp-server"]
+command  = "uvx"
+args     = ["awslabs.cfn-mcp-server@latest", "--readonly"]
+disabled = true
+env      = { AWS_PROFILE = "$AWS_PROFILE" }
+```
+
+To add a new MCP server, append a `[mcp.servers.<name>]` block and run `oxstack install`.
+
 ## Building from Source
 
 ```bash
@@ -145,7 +196,7 @@ Installed automatically by `oxstack install`. Defined in `oxstack.toml` under `[
 
 ### MCP Servers
 
-Defined in `oxstack.toml` under `[mcp.servers.*]`. Merged into `~/.claude/settings.json` and appended to `~/.codex/config.toml` by `oxstack install`.
+Defined in `oxstack.toml` under `[mcp.servers.*]`. `oxstack install` distributes them to all three tools: merged into `~/.claude/settings.json`, appended to `~/.codex/config.toml`, and merged into `~/.config/opencode/opencode.json`.
 
 | Server | Description |
 |--------|-------------|
@@ -157,7 +208,7 @@ Defined in `oxstack.toml` under `[mcp.servers.*]`. Merged into `~/.claude/settin
 | **ultracite** | Ultracite remote MCP |
 | **powertools** | AWS Lambda Powertools MCP |
 
-Servers needing env vars use values from `.env` (see `.env.example`). Set `disabled = true` in `oxstack.toml` for servers you want off by default on new machines. Use `oxstack pull-config` to capture toggled state back from your live settings.
+See [Configuration (oxstack.toml)](#configuration-oxstacktoml) for the full schema and examples, including env-var substitution, `disabled` flags, and `oxstack pull-config`.
 
 ### Development Guidelines
 
