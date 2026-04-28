@@ -1,3 +1,8 @@
+---
+name: build-test-commit
+description: Implement a list of features one at a time through a Build → Test → Simplify → Commit pipeline. Use when the user provides multiple features/fixes to ship and wants atomic commits per item with no mid-pipeline check-ins. Delegates commits to the git-committer agent.
+---
+
 # Build → Test → Simplify → Commit
 
 Implement features one at a time through a disciplined pipeline. Never bundle multiple features in one commit. Do not ask the user between features — keep going until all are done.
