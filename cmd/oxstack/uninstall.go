@@ -28,10 +28,13 @@ func cmdUninstall() {
 	// --- Step 5: Remove MCP block from Codex config.toml ---
 	removeMCPFromCodex()
 
-	// --- Step 6: Remove -byOx skills ---
+	// --- Step 6: Remove MCP servers from OpenCode config ---
+	removeMCPFromOpenCode()
+
+	// --- Step 7: Remove -byOx skills ---
 	removeByOxSkills()
 
-	// --- Step 7: Remove CLAUDE.md symlink ---
+	// --- Step 8: Remove CLAUDE.md symlink ---
 	removeClaudeMdSymlink(root)
 
 	fmt.Println()
@@ -187,6 +190,48 @@ func removeMCPFromCodex() {
 	trimmed := strings.TrimRight(content[:idx], "\n") + "\n"
 	os.WriteFile(codexConfig, []byte(trimmed), 0o644)
 	infof("Removed MCP servers from %s", codexConfig)
+}
+
+func removeMCPFromOpenCode() {
+	configPath := opencodeConfigPath()
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return
+	}
+
+	var config map[string]any
+	if err := json.Unmarshal(data, &config); err != nil {
+		return
+	}
+
+	mcpSection, ok := config["mcp"].(map[string]any)
+	if !ok || len(mcpSection) == 0 {
+		return
+	}
+
+	cfg := loadConfig()
+	removed := 0
+	for key := range cfg.MCP.Servers {
+		if _, exists := mcpSection[key]; exists {
+			delete(mcpSection, key)
+			removed++
+		}
+	}
+
+	if removed == 0 {
+		return
+	}
+
+	if len(mcpSection) == 0 {
+		delete(config, "mcp")
+	}
+
+	out, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return
+	}
+	os.WriteFile(configPath, append(out, '\n'), 0o644)
+	infof("Removed %d MCP servers from %s", removed, configPath)
 }
 
 func removeClaudeMdSymlink(root string) {

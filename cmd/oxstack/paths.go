@@ -74,9 +74,11 @@ func claudeSkillsDir() string  { return filepath.Join(homeDir(), ".claude", "ski
 func agentsSkillsDir() string  { return filepath.Join(homeDir(), ".agents", "skills") }
 func claudeAgentsDir() string  { return filepath.Join(homeDir(), ".claude", "agents") }
 func claudeSettingsPath() string { return filepath.Join(homeDir(), ".claude", "settings.json") }
-func codexDir() string         { return filepath.Join(homeDir(), ".codex") }
-func codexConfigPath() string  { return filepath.Join(homeDir(), ".codex", "config.toml") }
-func opencodeDir() string      { return filepath.Join(homeDir(), ".opencode") }
+func codexDir() string             { return filepath.Join(homeDir(), ".codex") }
+func codexConfigPath() string      { return filepath.Join(homeDir(), ".codex", "config.toml") }
+func opencodeDir() string          { return filepath.Join(homeDir(), ".opencode") }
+func opencodeConfigDir() string    { return filepath.Join(homeDir(), ".config", "opencode") }
+func opencodeConfigPath() string   { return filepath.Join(homeDir(), ".config", "opencode", "opencode.json") }
 func gstackDir() string        { return filepath.Join(homeDir(), ".claude", "skills", "gstack") }
 
 func syncFilePath() string {

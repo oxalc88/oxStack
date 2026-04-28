@@ -231,36 +231,32 @@ func installMCP(root string) {
 	infof("MCP servers → %s", settingsPath)
 
 	// Codex config.toml
-	installCodexMCP(root, envVars)
+	installCodexMCP(envVars)
+
+	// OpenCode config
+	installOpenCodeMCP(envVars)
 }
 
-func installCodexMCP(root string, envVars map[string]string) {
+func installCodexMCP(envVars map[string]string) {
 	codex := codexDir()
 	if !dirExists(codex) {
 		warnf("Skipping Codex MCP (%s not found)", codex)
 		return
 	}
 
+	// Strip any existing oxStack block then re-append — makes re-install idempotent.
 	codexConfig := codexConfigPath()
-	tomlPath := filepath.Join(root, "mcp", "codex.toml")
-	tomlData, err := os.ReadFile(tomlPath)
-	if err != nil {
-		warnf("Could not read %s: %v", tomlPath, err)
-		return
-	}
-
-	tomlStr := string(tomlData)
-	for k, v := range envVars {
-		tomlStr = strings.ReplaceAll(tomlStr, "$"+k, v)
-	}
-
-	// Check if already present
 	if data, err := os.ReadFile(codexConfig); err == nil {
-		if strings.Contains(string(data), "mcp_servers.awslabs-aws-diagram") {
-			infof("MCP servers already in %s (skipping)", codexConfig)
-			return
+		content := string(data)
+		marker := "# --- oxStack MCP servers ---"
+		if idx := strings.Index(content, marker); idx >= 0 {
+			content = strings.TrimRight(content[:idx], "\n") + "\n"
+			os.WriteFile(codexConfig, []byte(content), 0o644)
 		}
 	}
+
+	cfg := loadConfig()
+	block := buildCodexTOML(cfg, envVars)
 
 	f, err := os.OpenFile(codexConfig, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
@@ -269,8 +265,127 @@ func installCodexMCP(root string, envVars map[string]string) {
 	}
 	defer f.Close()
 
-	fmt.Fprintf(f, "\n# --- oxStack MCP servers ---\n%s", tomlStr)
+	fmt.Fprintf(f, "\n# --- oxStack MCP servers ---\n%s", block)
 	infof("MCP servers → %s", codexConfig)
+}
+
+func buildCodexTOML(cfg *Config, envVars map[string]string) string {
+	var sb strings.Builder
+	for name, server := range cfg.MCP.Servers {
+		codexName := strings.ReplaceAll(name, ".", "-")
+
+		command, _ := server["command"].(string)
+		command = subEnv(command, envVars)
+
+		var args []string
+		if argsAny, ok := server["args"].([]any); ok {
+			for _, a := range argsAny {
+				if s, ok := a.(string); ok {
+					args = append(args, subEnv(s, envVars))
+				}
+			}
+		}
+
+		quotedArgs := make([]string, len(args))
+		for i, a := range args {
+			quotedArgs[i] = fmt.Sprintf("%q", a)
+		}
+
+		fmt.Fprintf(&sb, "\n[mcp_servers.%s]\n", codexName)
+		fmt.Fprintf(&sb, "command = %q\n", command)
+		fmt.Fprintf(&sb, "args = [%s]\n", strings.Join(quotedArgs, ", "))
+
+		if envMap, ok := server["env"].(map[string]any); ok && len(envMap) > 0 {
+			fmt.Fprintf(&sb, "\n[mcp_servers.%s.env]\n", codexName)
+			for k, v := range envMap {
+				if s, ok := v.(string); ok {
+					fmt.Fprintf(&sb, "%s = %q\n", k, subEnv(s, envVars))
+				}
+			}
+		}
+	}
+	return sb.String()
+}
+
+func installOpenCodeMCP(envVars map[string]string) {
+	configDir := opencodeConfigDir()
+	configPath := opencodeConfigPath()
+
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		warnf("Could not create %s: %v — skipping OpenCode MCP", configDir, err)
+		return
+	}
+
+	cfg := loadConfig()
+	newServers := buildOpenCodeMCP(cfg, envVars)
+
+	var existing map[string]any
+	if data, err := os.ReadFile(configPath); err == nil {
+		json.Unmarshal(data, &existing)
+	}
+	if existing == nil {
+		existing = map[string]any{"$schema": "https://opencode.ai/config.json"}
+	}
+
+	mcpSection, _ := existing["mcp"].(map[string]any)
+	if mcpSection == nil {
+		mcpSection = make(map[string]any)
+		existing["mcp"] = mcpSection
+	}
+	for k, v := range newServers {
+		mcpSection[k] = v
+	}
+
+	out, err := json.MarshalIndent(existing, "", "  ")
+	if err != nil {
+		errorf("Could not marshal OpenCode config: %v", err)
+		return
+	}
+	if err := os.WriteFile(configPath, append(out, '\n'), 0o644); err != nil {
+		errorf("Could not write %s: %v", configPath, err)
+		return
+	}
+	infof("MCP servers → %s", configPath)
+}
+
+func buildOpenCodeMCP(cfg *Config, envVars map[string]string) map[string]any {
+	servers := make(map[string]any)
+	for name, server := range cfg.MCP.Servers {
+		command, _ := server["command"].(string)
+		cmdArray := []string{subEnv(command, envVars)}
+		if argsAny, ok := server["args"].([]any); ok {
+			for _, a := range argsAny {
+				if s, ok := a.(string); ok {
+					cmdArray = append(cmdArray, subEnv(s, envVars))
+				}
+			}
+		}
+
+		entry := map[string]any{
+			"type":    "local",
+			"command": cmdArray,
+		}
+
+		if envMap, ok := server["env"].(map[string]any); ok && len(envMap) > 0 {
+			environment := make(map[string]string)
+			for k, v := range envMap {
+				if s, ok := v.(string); ok {
+					environment[k] = subEnv(s, envVars)
+				}
+			}
+			entry["environment"] = environment
+		}
+
+		servers[name] = entry
+	}
+	return servers
+}
+
+func subEnv(s string, envVars map[string]string) string {
+	for k, v := range envVars {
+		s = strings.ReplaceAll(s, "$"+k, v)
+	}
+	return s
 }
 
 func installGstack() {
@@ -410,6 +525,8 @@ func printPostInstallSummary() {
 	for name := range cfg.Skills.External {
 		fmt.Printf("      /%s\n", name)
 	}
+	fmt.Println()
+	fmt.Printf("    MCP servers → ~/.claude/settings.json, ~/.codex/config.toml, %s\n", opencodeConfigPath())
 	fmt.Println()
 	fmt.Println("    CLI: oxstack install | oxstack sync | oxstack update | oxstack pull-config")
 	fmt.Println()
