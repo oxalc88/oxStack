@@ -1,2 +1,8 @@
 .env
 /oxstack
+
+# `npx skills add` (run by `oxstack install`) writes here when invoked without -g
+# and the cwd is this repo — see install.go installThirdPartySkills().
+/.agents/
+/skills-lock.json
+/.claude/skills/
