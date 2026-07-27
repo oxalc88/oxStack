@@ -17,7 +17,6 @@ core-web-vitals  = { repo = "AdeelMufti/addyo-skill-core-web-vitals",   skill = 
 performance      = { repo = "AdeelMufti/addyo-skill-performance",       skill = "performance" }
 seo              = { repo = "AdeelMufti/addyo-skill-seo",               skill = "seo" }
 web-quality-audit = { repo = "AdeelMufti/addyo-skill-web-quality-audit", skill = "web-quality-audit" }
-tdd              = { repo = "mattpocock/tdd",                           skill = "tdd" }
 ast-grep         = { repo = "ast-grep/agent-skill",                     skill = "ast-grep" }
 
 # MCP servers merged into ~/.claude/settings.json on oxstack install.
