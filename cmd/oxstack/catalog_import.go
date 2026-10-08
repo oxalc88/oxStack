@@ -22,6 +22,12 @@ func treeDigest(root string) (string, error) {
 		if err != nil {
 			return err
 		}
+		if d.Name() == ".git" {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
 		if d.Type()&os.ModeSymlink != 0 {
 			return fmt.Errorf("catalog import refuses symlinks: %s", path)
 		}
@@ -97,6 +103,12 @@ func importExternal(root, name, source string) error {
 	err = filepath.WalkDir(source, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if d.Name() == ".git" {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 		rel, _ := filepath.Rel(source, path)
 		p := filepath.Join(stage, rel)

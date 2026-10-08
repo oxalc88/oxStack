@@ -81,5 +81,9 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0644)
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, info.Mode().Perm())
 }

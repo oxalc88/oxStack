@@ -25,6 +25,9 @@ func TestExternalImportIsPinnedCatalogOnly(t *testing.T) {
 	if _, err = os.Stat(filepath.Join(e.Home, ".agents", "skills", "browser")); !os.IsNotExist(err) {
 		t.Fatal("import activated global skill")
 	}
+	if _, err = os.Stat(filepath.Join(e.Root, "catalog", "external", "browser", ".git")); !os.IsNotExist(err) {
+		t.Fatal("Git metadata copied into skill catalog")
+	}
 	c, err := loadCatalog(e.Root)
 	if err != nil {
 		t.Fatal(err)
