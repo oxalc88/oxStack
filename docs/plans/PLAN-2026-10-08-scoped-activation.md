@@ -1,7 +1,7 @@
 ---
 summary: Separate the capability catalog from explicit runtime activation and protect ownership.
 read_when: Changing installation, selections, runtime adapters, ownership, or migration.
-status: in-progress
+status: done
 ---
 
 # Scoped activation implementation
@@ -19,8 +19,10 @@ Status: Complete
 ## Stage 3: Documentation and verification
 Goal: Minimal global guidance, examples, migration runbook and effective-surface verification.
 Success: Full tests, race detector, vet, formatting, isolated CLI smoke checks and atomic commits.
-Status: In progress
+Status: Complete
 
 Constraints: No live Codex/agents modifications or old uninstall. No automatic migration.
 
-Validation: engine tests and race detector pass; native Codex profile smoke confirms explicit loading. Remaining: final docs/CLI smoke, vet, format, commits and one push.
+Validation: all behavior tests, race detector, vet, formatting and native Codex smoke pass. The smoke validates trusted AWS/non-AWS project configuration, explicit profiles, inactive pricing/CloudFormation, and zero base leakage. Python scripts parse cleanly. Implementation and migration are committed separately; final docs/verification commit completes the plan. One push follows verification.
+
+Compatibility findings: Codex 0.161.0 mcp list uses actual cwd for project discovery despite -C; verification sets both. Inactive Claude servers remain unregistered. Profile skills are explicit references, not global discovery. Legacy resources without ownership proof remain REVIEW items.

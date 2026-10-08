@@ -1,235 +1,273 @@
+---
+summary: Maintain a capability catalog and explicitly activate it by scope and runtime.
+read_when:
+  - Installing or uninstalling oxStack capabilities.
+  - Adding skills, MCP definitions, projects, or profiles.
+  - Migrating a legacy global installation.
+---
+
 # oxStack
 
-Portable AI tools configuration: custom skills, agents, and development guidelines for Claude Code, Codex CLI, and OpenCode.
+oxStack maintains reusable capabilities for Codex, Claude Code and OpenCode.
+**Catalog != activation.** Adding a skill or MCP definition never installs it
+into a runtime. Every installation needs an explicit scope and selection.
 
-## Prerequisites
-
-- [mise](https://mise.jdx.dev/) — manages the Go toolchain automatically
-- `npm` — required for agent-browser and third-party skills
-
-## Quick Start
-
-```bash
-git clone <repo-url> ~/projects/oxDevelop/oxStack
-cd ~/projects/oxDevelop/oxStack
-cp .env.example .env   # Edit with your values (AWS_PROFILE, etc.)
-
-# Install Go via mise (version pinned in .mise.toml)
-mise install
-
-# Build and install the CLI
-go install ./cmd/oxstack
-
-# Run the full installer
-oxstack install
+```text
+skills/                         Maintained local skill catalog
+catalog/external/               Reviewed, imported external snapshots (ignored)
+mcp/*.toml                      Runtime-neutral server definitions
+guidelines/*.md                 Reusable instruction templates
+selections/global.toml          Explicit universal baseline
+selections/projects/*.toml      Example project selections
+selections/profiles/*.toml      Explicit on-demand selections
+migration/legacy-catalog.toml   Frozen old signatures, not an active catalog
 ```
 
-## CLI Usage
+The default global selection contains only minimal universal instructions. It
+selects **no skills and no MCP servers**. AWS, Astro, Cloudflare, web audits,
+browser automation and domain workflows are never globally installed merely
+because oxStack maintains them. You can explicitly select a capability globally,
+but that deliberately exposes it across projects.
 
-The `oxstack` CLI is a single Go binary that works on macOS, Linux, and Windows.
+## Build and checks
 
-### `oxstack install`
-
-Runs the full installer — symlinks skills and agents, generates guideline files, merges MCP server configs, clones gstack, installs agent-browser, installs third-party skills, and deploys the -byOx skill variants.
-
-```bash
-oxstack install
-```
-
-### `oxstack sync`
-
-Checks gstack for upstream changes to forked skills (qa, design-review). Pulls latest gstack, shows commits since your last sync, and filters out boilerplate — only methodology-relevant changes are shown. Prompts to mark the current gstack commit as synced.
+Use the Go version declared in `.mise.toml`:
 
 ```bash
-oxstack sync
+go test ./...
+go test -race ./...
+go vet ./...
+go build -o /tmp/oxstack ./cmd/oxstack
 ```
 
-### `oxstack pull-config`
+Run from this repository, or set `OXSTACK_ROOT` to its absolute path. The CLI
+resolves its repository through the executable location, `OXSTACK_ROOT`, or a
+repository working directory. The old ignored `./oxstack` executable is not
+rebuilt automatically: use `go run ./cmd/oxstack` until you rebuild your launcher.
 
-Syncs MCP `disabled` flags from your live `~/.claude/settings.json` back into `oxStack/mcp/claude.json` so the state is preserved for new machines. Shows a per-server diff and prompts before writing.
+`install` without a scope fails. It does not clone gstack, install npm/browser
+packages, install agents, modify every runtime, or read `.env` for new activation.
+`--runtime` defaults to `codex`; invoke each runtime deliberately.
+
+## Global capabilities
 
 ```bash
-oxstack pull-config
+go run ./cmd/oxstack install --global --dry-run
+go run ./cmd/oxstack install --global
 ```
 
-Refuses to run if `mcp/claude.json` has uncommitted changes. Only touches the `disabled` field — never writes env-substituted values or permissions back to the repo.
+This manages a bounded universal instruction block in `$CODEX_HOME/AGENTS.md`.
+Existing user text is preserved. Legacy generated instructions require migration
+first. `CODEX_HOME` defaults to `~/.codex` and must be absolute.
 
-### `oxstack update`
-
-Regenerates -byOx skills from gstack's latest SKILL.md. For each forked skill it:
-
-1. Extracts the methodology from gstack (strips frontmatter and boilerplate sections)
-2. Transforms `$B` browse commands to `agent-browser` equivalents
-3. Preserves your -byOx header (frontmatter, intro, command mapping table)
-4. Shows a colored, section-aware diff summary and asks for confirmation before writing
+A custom global selection can explicitly opt into skills or tools:
 
 ```bash
-oxstack update          # colored summary + condensed diff
-oxstack update --full   # full unified diff (raw, verbose)
+go run ./cmd/oxstack install --global --selection /path/to/global.toml
 ```
 
-### `oxstack help`
+This selection replaces the **previous oxStack-owned selection** for that
+scope/runtime, not the user's unrelated configuration.
+
+## Project capabilities
 
 ```bash
-oxstack help
+go run ./cmd/oxstack install --project /path/to/lambda-repo \
+  --selection selections/projects/aws-lambda.toml --dry-run
+go run ./cmd/oxstack install --project /path/to/lambda-repo \
+  --selection selections/projects/aws-lambda.toml
 ```
 
-## Configuration (oxstack.toml)
+Codex receives selected skill links under `.agents/skills/` and selected MCPs in
+`.codex/config.toml`. Optional guidelines are added as an owned block in the
+project's `AGENTS.md`. Paths use the supplied checkout/worktree, not the common
+Git directory. Each worktree has independent ownership.
 
-`oxstack.toml` is the single source of truth for all runtime configuration. Edit it to add skills, toggle MCP servers, or change which gstack skills are tracked. Run `oxstack install` after any change.
+Trust the repository through Codex before relying on its project config. An
+empty project config does **not** suppress global servers. A genuinely clean
+non-AWS project requires the global installation to be migrated too.
 
-### `[gstack]` — forked skills
-
-Controls which gstack skills `oxstack sync` and `oxstack update` track for upstream changes and regenerate as `-byOx` variants.
+Example selection:
 
 ```toml
-[gstack]
-forked_skills = ["qa", "design-review"]
+skills = ["domain-modeling"]
+guidelines = []
+
+[mcp.aws-documentation]
+active = true
+
+[mcp.powertools]
+active = true
 ```
 
-### `[skills.external]` — third-party skills
+Add `powertools` to the skill catalog separately if you maintain a Powertools
+skill: the MCP definition and skill are distinct capabilities. The shipped
+example does not invent a missing skill.
 
-Each entry triggers one `npx skills add <repo> --skill <name>` call during `oxstack install`. To add a new skill, append a line — no code change or rebuild needed.
+## Profiles / on-demand
+
+The installed Codex 0.161.0 and current documentation use profile **files**:
+`$CODEX_HOME/<name>.config.toml`, selected with `--profile <name>`.
+
+```bash
+go run ./cmd/oxstack install --profile aws-tools
+codex --profile aws-tools
+```
+
+The shipped profile selects AWS pricing, diagrams and the Bedrock cost workflow.
+Installing it does not change base `config.toml` or global skill discovery.
+Profile skills are explicit `SKILL.md` references in `developer_instructions`,
+not globally installed skills and not additions to `/skills`. Read them only
+when the selected workflow is requested. Project scopes use real skill links.
+
+Create another file under `selections/profiles/`, or pass `--selection FILE`.
+Use the browser example only after importing its external skill; installing a
+workflow does not install its browser executable or dependencies.
+
+## Add capabilities to the catalog
+
+For a local skill, create `skills/<name>/SKILL.md` with valid skill frontmatter.
+Nothing activates until `<name>` appears in a selection's `skills` list.
+The two `gstack-ab` variants are also catalog capabilities: `qa-byOx` and
+`design-review-byOx`. `sync`/`update` maintain those source files; they no longer
+copy changes into global skill directories. Provision upstream gstack separately.
+
+For an external skill, add catalog metadata to `oxstack.toml`:
 
 ```toml
-[skills.external]
-tdd        = { repo = "mattpocock/tdd",        skill = "tdd" }
-ast-grep   = { repo = "ast-grep/agent-skill",  skill = "ast-grep" }
-my-skill   = { repo = "owner/repo",            skill = "skill-name" }  # ← add like this
+[skills.external.example]
+repo = "owner/repository"
+skill = "example"
+revision = "FULL_REVIEWED_GIT_COMMIT"
 ```
 
-### `[mcp.servers.*]` — MCP servers
+Import from a reviewed, clean local Git skill directory:
 
-Defines MCP servers installed into **Claude** (`~/.claude/settings.json`), **Codex** (`~/.codex/config.toml`), and **OpenCode** (`~/.config/opencode/opencode.json`) — all from this single file.
+```bash
+go run ./cmd/oxstack catalog import example --source /checkout/path/to/example
+```
 
-Fields:
-- `command` / `args` — the server binary and its arguments
-- `env` — environment variables passed to the server process
-- `disabled` — `true` means installed-but-off by default; capture live toggles back with `oxstack pull-config`
+This copies only into `catalog/external/example`, records the resolved Git
+commit and content digest, and activates nothing. If the catalog revision is
+empty, the resolved commit still pins the imported snapshot; prefer an explicit
+reviewed pin for reproducibility. Import refuses dirty content, symlinks, wrong
+pins and existing catalog destinations. Review and replace snapshots explicitly
+when updating; source repository metadata is operator-declared.
 
-`$VAR` placeholders in any string field are substituted from `.env` at install time (see `.env.example`).
+For an MCP, create `mcp/<name>.toml`:
 
 ```toml
-# Minimal server
-[mcp.servers.serverless]
-command = "serverless"
-args    = ["mcp"]
-
-# Server with env-var substitution and disabled by default
-[mcp.servers."awslabs.cfn-mcp-server"]
-command  = "uvx"
-args     = ["awslabs.cfn-mcp-server@latest", "--readonly"]
-disabled = true
-env      = { AWS_PROFILE = "$AWS_PROFILE" }
+source = "upstream/package"
+version = "1.2.3"
+command = "uvx"
+args = ["upstream-package@1.2.3"]
+inherit_env = ["AWS_PROFILE", "AWS_REGION"]
 ```
 
-To add a new MCP server, append a `[mcp.servers.<name>]` block and run `oxstack install`.
+Or use `url = "https://example.com/mcp"` instead of command/args for an HTTP MCP.
+Select it under `[mcp.<name>]`. Keep AWS server names identifiable (for example
+`aws-cloudformation`) so capability checks can recognize them. Optional selection `env` values are scope-specific;
+never commit secrets. Runtime credential inheritance uses Codex `env_vars`,
+Claude variable references and OpenCode environment references. No particular
+AWS account/profile is baked into the portable catalog.
 
-## Building from Source
+`active` is canonical. Legacy `disabled = true` input maps to inactive; specifying
+both is an error. Codex/OpenCode emit `enabled = false`; inactive Claude servers
+are **not registered**, since an invented per-server disabled field would not
+reliably disable them. The shipped legacy packages retain unversioned/latest
+commands; review and pin these before production use. Import/install never runs
+them, and the tests do not validate upstream server health.
+
+## Native runtime adapters
+
+| Scope | Codex | Claude Code | OpenCode |
+|---|---|---|---|
+| Global MCP | `$CODEX_HOME/config.toml` | `~/.claude.json` | `$XDG_CONFIG_HOME/opencode/opencode.json` |
+| Project MCP | `.codex/config.toml` | `.mcp.json` | `opencode.json` |
+| Global skill | `~/.agents/skills` | `~/.claude/skills` | `~/.agents/skills` |
+| Project skill | `.agents/skills` | `.claude/skills` | `.agents/skills` |
+| Global instructions | `$CODEX_HOME/AGENTS.md` | `~/.claude/CLAUDE.md` | `$XDG_CONFIG_HOME/opencode/AGENTS.md` |
+
+Other runtimes have no fabricated Codex-style profile syntax. Explicit profile
+artifacts live under `${XDG_STATE_HOME:-~/.local/state}/oxstack/profiles/<name>`:
 
 ```bash
-# Build in current directory
-go build -o oxstack ./cmd/oxstack
+go run ./cmd/oxstack install --profile aws-tools --runtime claude
+claude --mcp-config ~/.local/state/oxstack/profiles/aws-tools/claude.json \
+  --append-system-prompt-file ~/.local/state/oxstack/profiles/aws-tools/instructions.md
 
-# Install to $GOPATH/bin (add to PATH)
-go install ./cmd/oxstack
-
-# Cross-compile
-GOOS=linux GOARCH=amd64 go build -o oxstack-linux ./cmd/oxstack
-GOOS=windows GOARCH=amd64 go build -o oxstack.exe ./cmd/oxstack
+go run ./cmd/oxstack install --profile aws-tools --runtime opencode
+OPENCODE_CONFIG=~/.local/state/oxstack/profiles/aws-tools/opencode.json opencode
 ```
 
-If running outside the repo, set `OXSTACK_ROOT` to the repo path so the CLI can find its config files:
+Claude may require native project-server approval. OpenCode's explicit config
+merges with its normal configuration. These invocations do not erase existing
+user/account tools. Adjust paths if `XDG_STATE_HOME` is set. Existing JSONC
+configuration is refused instead of being destructively converted to JSON.
+
+## Ownership and uninstall
+
+Ownership records include capability, source, version/provenance, scope,
+destination, runtime and fingerprint. Global/profile manifests live under
+`$XDG_STATE_HOME/oxstack`; project manifests under `.oxstack/ownership-<runtime>.json`.
+Keep project ownership local and ignore `.oxstack/` in the consumer repository;
+absolute skill links also require the oxStack checkout at their target location.
 
 ```bash
-export OXSTACK_ROOT=~/projects/oxDevelop/oxStack
+go run ./cmd/oxstack uninstall --project /path/to/repo --dry-run
+go run ./cmd/oxstack uninstall --project /path/to/repo
 ```
 
-## What Gets Installed
+Uninstall uses the manifest, never all catalog names or marker-to-EOF truncation.
+It removes only unchanged owned links, entries and instruction blocks. It leaves
+unrelated settings, app MCPs, user instructions, directories and runtime state.
+Missing/modified owned entries, unsafe symlink parents, ambiguous shared inline
+TOML, corrupt manifests and unowned collisions fail safely. Existing user entries
+are not adopted even when their content matches. Resolve ownership deliberately.
 
-### Custom Skills
+TOML edits preserve unrelated source bytes and future unknown settings; JSON
+preserves unrelated values but may reformat the file. Installs preflight the
+whole plan, recheck before writes, write files atomically and roll back normal
+write errors. Do not run simultaneous installers or edit destinations during
+apply. Power loss/process termination can leave a partial multi-file operation;
+stop and review the manifest and files rather than forcing deletion.
 
-Deployed to both `~/.claude/skills/` and `~/.agents/skills/`:
+## Migration and verification
 
-| Skill | Description |
-|-------|-------------|
-| **astro-coding** | Astro/Starlight implementation patterns, critical rules, and error catalog |
-| **data-modeling** | Translate domain models into persistence designs (ER diagrams, data dictionaries, index strategies) |
-| **domain-modeling** | DDD-based domain analysis (bounded contexts, entities, aggregates, invariants, state machines) |
+Migration is **not** automatic and is currently scoped to the old Codex install.
+See [the migration runbook](docs/guides/scoped-activation-migration.md).
+The old uninstall is gone. `pull-config` is retired: edit selections rather than
+copying one runtime's global activation back into the catalog.
 
-### Custom Agents
-
-Deployed to `~/.claude/agents/`:
-
-| Agent | Model | Description |
-|-------|-------|-------------|
-| **git-committer** | haiku | Commits changes with Conventional Commits format |
-| **tdd-specialist** | sonnet | Writes new behavior-focused tests via red-green-refactor. Produces `test-findings.md`. |
-| **test-fixer** | sonnet | Rewrites flagged tests from `test-review-findings.md`. Never writes new tests. |
-| **test-reviewer** | sonnet | Evaluates existing test quality (GOOD/NOISY/FRAGILE/WRONG). Produces `test-review-findings.md`. |
-
-### gstack + agent-browser Skills
-
-Installed automatically by `oxstack install`. Clones [gstack](https://github.com/garrytan/gstack), installs [agent-browser](https://github.com/vercel-labs/agent-browser), and deploys -byOx skill variants that use `agent-browser` instead of gstack's compiled Bun binary. No Bun or Playwright dependency — works on macOS, Linux, and Windows.
-
-| Skill | Description |
-|-------|-------------|
-| **qa-byOx** | Systematic QA testing via agent-browser — test, fix, verify loop |
-| **design-review-byOx** | Designer's eye audit via agent-browser — find and fix visual issues |
-
-### Third-party Skills
-
-Installed automatically by `oxstack install`. Defined in `oxstack.toml` under `[skills.external]` — add a one-line entry to track a new skill; no code changes or rebuilds needed.
-
-| Skill | Source |
-|-------|--------|
-| **agent-browser** | Vercel — browser automation |
-| **find-skills** | Vercel — discover installable skills |
-| **accessibility** | Addy Osmani — WCAG 2.2 audit |
-| **best-practices** | Addy Osmani — security & code quality |
-| **core-web-vitals** | Addy Osmani — LCP/INP/CLS optimization |
-| **performance** | Addy Osmani — page speed optimization |
-| **seo** | Addy Osmani — search engine optimization |
-| **web-quality-audit** | Addy Osmani — Lighthouse audit |
-| **tdd** | Matt Pocock — test-driven development |
-| **ast-grep** | ast-grep — AST-based structural code search |
-
-### MCP Servers
-
-Defined in `oxstack.toml` under `[mcp.servers.*]`. `oxstack install` distributes them to all three tools: merged into `~/.claude/settings.json`, appended to `~/.codex/config.toml`, and merged into `~/.config/opencode/opencode.json`.
-
-| Server | Description |
-|--------|-------------|
-| **awslabs.aws-diagram-mcp-server** | Generate AWS architecture diagrams |
-| **awslabs.aws-documentation-mcp-server** | Query AWS documentation |
-| **awslabs.aws-pricing-mcp-server** | Look up AWS service pricing |
-| **awslabs.cfn-mcp-server** | CloudFormation template analysis (readonly) |
-| **serverless** | Serverless Framework MCP integration |
-| **ultracite** | Ultracite remote MCP |
-| **powertools** | AWS Lambda Powertools MCP |
-
-See [Configuration (oxstack.toml)](#configuration-oxstacktoml) for the full schema and examples, including env-var substitution, `disabled` flags, and `oxstack pull-config`.
-
-### Development Guidelines
-
-Generated to `~/.codex/AGENTS.md` and `~/.opencode/AGENTS.md`. Shared development philosophy, process, git safety defaults, and quality gates. The OpenCode version includes an additional multi-model delivery flow section.
-
-## Workflow
-
-```
-oxstack install      # First time setup (or after adding new skills/agents)
-oxstack sync         # After gstack updates — review methodology changes
-oxstack update       # Apply gstack methodology changes to -byOx skills
-oxstack pull-config  # Capture MCP disabled toggles back into mcp/claude.json
-oxstack uninstall    # Remove all symlinks, generated files, and MCP servers
-```
-
-Edit skills and agents directly in this repo. Changes are reflected immediately through symlinks — no reinstall needed. Only re-run `oxstack install` when adding new skills/agents or regenerating guideline files.
-
-## Uninstall
+After migration:
 
 ```bash
-oxstack uninstall
+codex -C /path/to/non-aws-project mcp list --json |
+jq -e '[.[] | select(.name | test("aws|bedrock|powertools|serverless"; "i"))] | length == 0'
+
+python3 scripts/verify-clean-project.py /path/to/non-aws-project
 ```
 
-Removes all skill/agent symlinks, generated AGENTS.md files, MCP server entries, and -byOx skills. External skills and backups (`.bak` files) are not affected.
+On the tested Codex 0.161.0, `mcp list` discovers project configuration from its
+actual working directory even when `-C` names another directory. Also run the
+MCP check after `cd /path/to/non-aws-project`. The verification script sets both
+working directory and `-C` to prevent a false pass from missing project config.
+
+Inspect `/skills` and `/mcp` in fresh CLI and desktop sessions. The verification
+script checks known AWS skill paths in the actual prompt; app/account plugins,
+unknown naming conventions and other independent installers need separate review.
+
+For a safe native CLI smoke check before migrating your machine:
+
+```bash
+python3 scripts/smoke-codex.py
+```
+
+It uses temporary Codex/state/project paths and only lists configured MCPs;
+it does not launch AWS servers or modify live configuration. Skill deployment
+is covered by the temporary-home Go tests; the unchanged live user skill catalog
+is intentionally not cleaned by this smoke check.
+
+References: [Codex configuration](https://learn.chatgpt.com/docs/config-file/config-basic),
+[Claude MCP scopes](https://code.claude.com/docs/en/mcp),
+[OpenCode MCP](https://opencode.ai/docs/mcp-servers/).
