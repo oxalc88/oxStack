@@ -28,6 +28,11 @@ func main() {
 	switch os.Args[1] {
 	case "install":
 		cmdInstall()
+	case "catalog":
+		if err := cmdCatalog(); err != nil {
+			errorf("%v", err)
+			os.Exit(1)
+		}
 	case "sync":
 		cmdSync()
 	case "update":
@@ -47,18 +52,15 @@ func main() {
 }
 
 func cmdHelp() {
-	fmt.Printf(bold+"oxstack"+reset+" — oxStack CLI\n")
+	fmt.Printf(bold + "oxstack" + reset + " — oxStack CLI\n")
 	fmt.Println()
-	fmt.Println("Usage: oxstack <command>")
-	fmt.Println()
-	fmt.Println("Commands:")
-	fmt.Println("  install      Run the full oxStack installer (skills, agents, MCP, gstack)")
-	fmt.Println("  sync         Check gstack for updates to forked skills (qa, design-review)")
-	fmt.Println("  update       Regenerate -byOx skills from gstack's latest methodology")
-	fmt.Println("  pull-config  Sync MCP disabled flags from ~/.claude/settings.json → oxstack.toml")
-	fmt.Println("  uninstall    Remove all symlinks, generated files, and MCP servers")
-	fmt.Println("  help         Show this help message")
-	fmt.Println()
+	fmt.Println("Usage: oxstack <command> [options]")
+	fmt.Println("  install --global|--project DIR|--profile NAME [--selection FILE] [--runtime codex|claude|opencode] [--dry-run]")
+	fmt.Println("  uninstall --global|--project DIR|--profile NAME [--runtime ...] [--dry-run]")
+	fmt.Println("  catalog import NAME --source DIR   Import a reviewed skill without activation")
+	fmt.Println("  sync / update                     Maintain forked gstack catalog sources")
+	fmt.Println("  help                              Show this help")
+
 	fmt.Printf("Repo: %s\n", repoRoot())
 }
 

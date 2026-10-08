@@ -8,11 +8,11 @@ import (
 )
 
 func cmdSync() {
-	fmt.Printf(bold+"oxstack sync"+reset+" — checking gstack for updates to forked skills\n\n")
+	fmt.Printf(bold + "oxstack sync" + reset + " — checking gstack for updates to forked skills\n\n")
 
 	gstack := gstackDir()
 	if !dirExists(gstack) {
-		errorf("gstack not found at %s — run 'oxstack install' first", gstack)
+		errorf("gstack not found at %s — provide upstream gstack explicitly at ~/.claude/skills/gstack", gstack)
 		os.Exit(1)
 	}
 
@@ -51,7 +51,7 @@ func cmdSync() {
 
 	// Show commits since last sync
 	if lastSync != "" {
-		fmt.Printf(bold+"gstack commits since last sync:"+reset+"\n")
+		fmt.Printf(bold + "gstack commits since last sync:" + reset + "\n")
 		out, _ := runSilentDir(gstack, "git", "log", "--oneline", lastSync+"..HEAD")
 		fmt.Print(out)
 		fmt.Println()
@@ -98,7 +98,7 @@ func cmdSync() {
 	if !changesFound {
 		infof("No methodology changes in forked skills")
 	} else {
-		fmt.Printf(yellow+"Run 'oxstack update' to apply gstack methodology changes to your -byOx skills."+reset+"\n\n")
+		fmt.Printf(yellow + "Run 'oxstack update' to apply gstack methodology changes to your -byOx skills." + reset + "\n\n")
 	}
 
 	// Prompt to mark as synced

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 )
 
 // homeDir returns the user's home directory.
@@ -69,84 +68,18 @@ func repoRoot() string {
 	return ""
 }
 
-// Standard paths
-func claudeSkillsDir() string  { return filepath.Join(homeDir(), ".claude", "skills") }
-func agentsSkillsDir() string  { return filepath.Join(homeDir(), ".agents", "skills") }
-func claudeAgentsDir() string  { return filepath.Join(homeDir(), ".claude", "agents") }
-func claudeSettingsPath() string { return filepath.Join(homeDir(), ".claude", "settings.json") }
-func codexDir() string             { return filepath.Join(homeDir(), ".codex") }
-func codexConfigPath() string      { return filepath.Join(homeDir(), ".codex", "config.toml") }
-func opencodeDir() string          { return filepath.Join(homeDir(), ".opencode") }
-func opencodeConfigDir() string    { return filepath.Join(homeDir(), ".config", "opencode") }
-func opencodeConfigPath() string   { return filepath.Join(homeDir(), ".config", "opencode", "opencode.json") }
-func gstackDir() string        { return filepath.Join(homeDir(), ".claude", "skills", "gstack") }
+// gstack remains an explicitly provisioned catalog-maintenance source.
+func gstackDir() string { return filepath.Join(homeDir(), ".claude", "skills", "gstack") }
 
 func syncFilePath() string {
 	return filepath.Join(repoRoot(), "gstack-ab", ".last-sync-commit")
 }
 
-// symlink creates a symlink at dst pointing to src.
-// On Windows, falls back to copying if symlink fails (needs admin).
-func symlink(src, dst string) error {
-	// Remove existing symlink or backup existing real file/dir
-	if info, err := os.Lstat(dst); err == nil {
-		if info.Mode()&os.ModeSymlink != 0 {
-			os.Remove(dst)
-		} else {
-			bak := dst + ".bak"
-			warnf("Backing up %s → %s", dst, bak)
-			if err := os.Rename(dst, bak); err != nil {
-				return fmt.Errorf("backup %s: %w", dst, err)
-			}
-		}
-	}
-
-	err := os.Symlink(src, dst)
-	if err != nil && runtime.GOOS == "windows" {
-		// Fallback: copy on Windows
-		warnf("Symlink failed, copying instead: %s → %s", src, dst)
-		return copyDir(src, dst)
-	}
-	return err
-}
-
-// copyDir recursively copies src to dst.
-func copyDir(src, dst string) error {
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	if srcInfo.IsDir() {
-		if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
-			return err
-		}
-		entries, err := os.ReadDir(src)
-		if err != nil {
-			return err
-		}
-		for _, entry := range entries {
-			s := filepath.Join(src, entry.Name())
-			d := filepath.Join(dst, entry.Name())
-			if err := copyDir(s, d); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	return copyFile(src, dst)
-}
-
-// copyFile copies a single file from src to dst.
+// copyFile is used only for catalog maintenance, never implicit activation.
 func copyFile(src, dst string) error {
 	data, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(dst, data, srcInfo.Mode())
+	return os.WriteFile(dst, data, 0644)
 }

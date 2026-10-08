@@ -1,0 +1,8 @@
+# Definition only; activate through a selection.
+source = "awslabs.cfn-mcp-server"
+version = "unversioned"
+command = "uvx"
+args = ["awslabs.cfn-mcp-server@latest", "--readonly"]
+
+# Read runtime credentials without embedding a machine-specific profile.
+inherit_env = ["AWS_PROFILE", "AWS_REGION"]

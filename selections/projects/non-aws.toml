@@ -1,0 +1,3 @@
+# Empty activation: no AWS skills or MCP definitions.
+skills = []
+guidelines = []

@@ -1,0 +1,5 @@
+# Definition only; activate through a selection.
+source = "ultracite"
+version = "unversioned"
+command = "npx"
+args = ["-y", "mcp-remote", "https://www.ultracite.ai/api/mcp/mcp"]

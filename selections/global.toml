@@ -1,0 +1,3 @@
+# Explicit baseline: no domain skills and no MCP servers.
+skills = []
+guidelines = ["universal"]

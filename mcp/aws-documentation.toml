@@ -1,0 +1,8 @@
+# Definition only; activate through a selection.
+source = "awslabs.aws-documentation-mcp-server"
+version = "unversioned"
+command = "uvx"
+args = ["awslabs.aws-documentation-mcp-server@latest"]
+
+[env]
+FASTMCP_LOG_LEVEL = "ERROR"

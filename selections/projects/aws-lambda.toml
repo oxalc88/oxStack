@@ -1,0 +1,8 @@
+skills = ["domain-modeling"]
+guidelines = []
+
+[mcp.aws-documentation]
+active = true
+
+[mcp.powertools]
+active = true

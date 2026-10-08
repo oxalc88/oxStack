@@ -1,0 +1,5 @@
+# Definition only; activate through a selection.
+source = "serverless"
+version = "unversioned"
+command = "serverless"
+args = ["mcp"]

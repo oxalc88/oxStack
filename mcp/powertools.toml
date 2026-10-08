@@ -1,0 +1,5 @@
+# Definition only; activate through a selection.
+source = "powertools"
+version = "unversioned"
+command = "npx"
+args = ["-y", "powertools-for-aws-mcp"]

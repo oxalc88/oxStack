@@ -1,0 +1,9 @@
+# Selected only with codex --profile aws-tools.
+skills = ["bedrock-costs"]
+guidelines = []
+
+[mcp.aws-pricing]
+active = true
+
+[mcp.aws-diagrams]
+active = true

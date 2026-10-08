@@ -27,16 +27,15 @@ func cmdUpdate() {
 		}
 	}
 
-	fmt.Printf(bold+"oxstack update"+reset+" — regenerate -byOx skills from gstack methodology\n\n")
+	fmt.Printf(bold + "oxstack update" + reset + " — regenerate -byOx skills from gstack methodology\n\n")
 
 	gstack := gstackDir()
 	if !dirExists(gstack) {
-		errorf("gstack not found at %s — run 'oxstack install' first", gstack)
+		errorf("gstack not found at %s — provide upstream gstack explicitly at ~/.claude/skills/gstack", gstack)
 		os.Exit(1)
 	}
 
 	root := repoRoot()
-	skillsDir := claudeSkillsDir()
 	anyUpdated := false
 
 	for _, skill := range loadConfig().Gstack.ForkedSkills {
@@ -120,15 +119,6 @@ func cmdUpdate() {
 			continue
 		}
 		infof("%s: updated %s", skill, byOxSrc)
-
-		// Re-copy to ~/.claude/skills/<skill>-byOx/
-		byOxDst := filepath.Join(skillsDir, skill+"-byOx", "SKILL.md")
-		os.MkdirAll(filepath.Dir(byOxDst), 0o755)
-		if err := os.WriteFile(byOxDst, []byte(newContent), 0o644); err != nil {
-			errorf("%s: could not copy to %s: %v", skill, byOxDst, err)
-		} else {
-			infof("%s: copied to %s", skill, byOxDst)
-		}
 
 		anyUpdated = true
 		fmt.Println()
