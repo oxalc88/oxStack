@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -31,7 +32,15 @@ func parseDocument(b []byte, isTOML bool) (map[string]any, error) {
 	if isTOML {
 		err = toml.Unmarshal(b, &d)
 	} else {
-		err = json.Unmarshal(b, &d)
+		decoder := json.NewDecoder(bytes.NewReader(b))
+		decoder.UseNumber()
+		err = decoder.Decode(&d)
+		if err == nil {
+			var extra any
+			if trailing := decoder.Decode(&extra); trailing != io.EOF {
+				err = fmt.Errorf("configuration has invalid trailing JSON")
+			}
+		}
 	}
 	if d == nil && err == nil {
 		err = fmt.Errorf("configuration must be an object")

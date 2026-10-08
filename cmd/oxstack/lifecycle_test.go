@@ -263,3 +263,27 @@ func TestSymlinkedConfigAndSkillParentsRefused(t *testing.T) {
 		t.Fatal("symlinked parent followed")
 	}
 }
+
+func TestJSONPreservesUnknownLargeNumbers(t *testing.T) {
+	e := fixture(t)
+	target := Target{Scope: "project", Runtime: "opencode", Project: filepath.Join(e.Home, "project")}
+	path, _ := mcpDestination(e, target, "aws-documentation")
+	original := `{"future": {"large": 900719925474099312345, "decimal": 1.234567890123456789}, "mcp": {"user": {"type":"local","command":["keep"]}}}`
+	writeTest(t, path, original)
+	yes := true
+	applySelection(t, e, target, Selection{MCP: map[string]Activation{"aws-documentation": {Active: &yes}}})
+	p, err := planUninstall(e, target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = p.Apply(); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(path)
+	if !strings.Contains(string(b), "900719925474099312345") || !strings.Contains(string(b), "1.234567890123456789") {
+		t.Fatal("unrelated JSON numbers lost precision")
+	}
+	if _, err := parseDocument([]byte(`{} {}`), false); err == nil {
+		t.Fatal("trailing JSON accepted")
+	}
+}
