@@ -33,6 +33,11 @@ func main() {
 			errorf("%v", err)
 			os.Exit(1)
 		}
+	case "migrate":
+		if err := cmdMigrate(); err != nil {
+			errorf("%v", err)
+			os.Exit(1)
+		}
 	case "sync":
 		cmdSync()
 	case "update":
@@ -58,6 +63,8 @@ func cmdHelp() {
 	fmt.Println("  install --global|--project DIR|--profile NAME [--selection FILE] [--runtime codex|claude|opencode] [--dry-run]")
 	fmt.Println("  uninstall --global|--project DIR|--profile NAME [--runtime ...] [--dry-run]")
 	fmt.Println("  catalog import NAME --source DIR   Import a reviewed skill without activation")
+	fmt.Println("  migrate [--dry-run]                Preview legacy Codex activation")
+	fmt.Println("  migrate --apply                   Preview, then require typed confirmation")
 	fmt.Println("  sync / update                     Maintain forked gstack catalog sources")
 	fmt.Println("  help                              Show this help")
 
