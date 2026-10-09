@@ -154,6 +154,21 @@ reviewed pin for reproducibility. Import refuses dirty content, symlinks, wrong
 pins and existing catalog destinations. Review and replace snapshots explicitly
 when updating; source repository metadata is operator-declared.
 
+Existing installed copies without verified upstream revisions can be preserved explicitly:
+
+```bash
+go run ./cmd/oxstack catalog import example --source /installed/example --snapshot
+```
+
+Snapshot mode records `kind = local-snapshot`, the historical source path and a
+content hash; it makes no Git revision claim. It refuses a declared Git pin and
+activates nothing. Unknown upstream sources must be declared as `repo = "UNKNOWN"`.
+Local catalog contents are ignored by Git: back them up separately. To relocate
+global skills, first import and verify every copy, preserve the originals outside
+skill discovery, and retarget dependent links. Record old paths and link targets
+in a private rollback inventory. Do not delete originals or automatically activate
+the imported catalog.
+
 For an MCP, create `mcp/<name>.toml`:
 
 ```toml

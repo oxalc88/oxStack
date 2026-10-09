@@ -102,3 +102,25 @@ bytes (base64 encoded), mode, existence and symlink target. Restore only reviewe
 paths from those snapshots, with current-state checks. Do not run the old installer
 or uninstall to roll back. Multi-file operations are not crash-atomic: a killed
 process or power loss requires manual inspection before a retry.
+
+## Preserve reviewed third-party installations
+
+After individually reviewing the remaining copied skills, use `catalog import
+NAME --source DIR --snapshot` to retain an installed copy whose Git revision is
+unknown. Declare the capability in `oxstack.toml` first. Known installer repository
+metadata is evidence of origin, not proof of a Git revision; use `UNKNOWN` when
+origin is unverified. The imported copy remains inactive until explicitly selected.
+
+Before retiring a global copy, compare every file's bytes and permissions against
+the preserved catalog. Archive the original outside all discovery directories;
+keep a private inventory containing original/destination paths, file hashes,
+permissions and old/new dependent symlink targets. Retarget existing other-runtime
+links only after verification. Leave installer lock metadata in place as historical
+evidence. This reviewed relocation is separate from `migrate`, which continues to
+refuse ownership of unknown copies.
+
+To recover, first verify archived files against that inventory and require that
+original destinations are absent. Restore the original directories, then restore
+only dependent symlinks that still match the recorded replacement targets. Stop
+on any conflict; never overwrite later user changes. Catalog copies and archives
+are local data and require backups independently of Git.

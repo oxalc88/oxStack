@@ -55,3 +55,60 @@ repo = "ast-grep/agent-skill"
 skill = "ast-grep"
 # Set revision to a reviewed Git commit; import records the resolved commit.
 revision = ""
+
+# Preserved local catalog snapshots; original upstream provenance is unverified.
+
+[skills.external.agents-sdk]
+repo = "UNKNOWN"
+skill = "agents-sdk"
+revision = ""
+
+[skills.external.cloudflare]
+repo = "UNKNOWN"
+skill = "cloudflare"
+revision = ""
+
+[skills.external.cloudflare-email-service]
+repo = "UNKNOWN"
+skill = "cloudflare-email-service"
+revision = ""
+
+[skills.external.cloudflare-one]
+repo = "UNKNOWN"
+skill = "cloudflare-one"
+revision = ""
+
+[skills.external.cloudflare-one-migrations]
+repo = "UNKNOWN"
+skill = "cloudflare-one-migrations"
+revision = ""
+
+[skills.external.durable-objects]
+repo = "UNKNOWN"
+skill = "durable-objects"
+revision = ""
+
+[skills.external.sandbox-sdk]
+repo = "UNKNOWN"
+skill = "sandbox-sdk"
+revision = ""
+
+[skills.external.turnstile-spin]
+repo = "UNKNOWN"
+skill = "turnstile-spin"
+revision = ""
+
+[skills.external.web-perf]
+repo = "UNKNOWN"
+skill = "web-perf"
+revision = ""
+
+[skills.external.workers-best-practices]
+repo = "UNKNOWN"
+skill = "workers-best-practices"
+revision = ""
+
+[skills.external.wrangler]
+repo = "UNKNOWN"
+skill = "wrangler"
+revision = ""
