@@ -71,3 +71,38 @@ func TestCLIPropagatesPlanningErrors(t *testing.T) {
 		t.Fatalf("lost planning error: %v", err)
 	}
 }
+
+func TestLocalSnapshotPreservesUnknownRevisionWithoutActivation(t *testing.T) {
+	e := fixture(t)
+	source := filepath.Join(e.Home, "installed")
+	writeTest(t, filepath.Join(source, "SKILL.md"), "local workflow")
+	writeTest(t, filepath.Join(e.Root, "oxstack.toml"), "[skills.external.browser]\nrepo = \"UNKNOWN\"\nskill = \"browser\"\n")
+	if err := importExternalMode(e.Root, "browser", source, true); err != nil {
+		t.Fatal(err)
+	}
+	c, err := loadCatalog(e.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(c.Skills["browser"].Version, "local-sha256:") {
+		t.Fatal("snapshot impersonates Git revision")
+	}
+	if _, err := os.Stat(filepath.Join(e.Home, ".agents", "skills", "browser")); !os.IsNotExist(err) {
+		t.Fatal("snapshot activated globally")
+	}
+	applySelection(t, e, Target{Scope: "project", Runtime: "codex", Project: filepath.Join(e.Home, "project")}, Selection{Skills: []string{"browser"}})
+	writeTest(t, filepath.Join(e.Root, "catalog", "external", "browser", "SKILL.md"), "tampered")
+	if _, err := loadCatalog(e.Root); err == nil {
+		t.Fatal("tampered snapshot accepted")
+	}
+}
+
+func TestLocalSnapshotCannotBypassGitPin(t *testing.T) {
+	e := fixture(t)
+	source := filepath.Join(e.Home, "installed")
+	writeTest(t, filepath.Join(source, "SKILL.md"), "workflow")
+	writeTest(t, filepath.Join(e.Root, "oxstack.toml"), "[skills.external.browser]\nrepo = \"example/browser\"\nskill = \"browser\"\nrevision = \"reviewed-commit\"\n")
+	if err := importExternalMode(e.Root, "browser", source, true); err == nil {
+		t.Fatal("Git pin bypassed")
+	}
+}

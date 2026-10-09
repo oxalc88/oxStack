@@ -10,6 +10,8 @@ import (
 )
 
 type SkillProvenance struct {
+	Kind       string `json:"kind,omitempty"`
+	SourcePath string `json:"source_path,omitempty"`
 	Repository string `json:"repository"`
 	Revision   string `json:"revision"`
 	Skill      string `json:"skill"`
@@ -48,6 +50,10 @@ func treeDigest(root string) (string, error) {
 	return fingerprint(files), err
 }
 func importExternal(root, name, source string) error {
+	return importExternalMode(root, name, source, false)
+}
+
+func importExternalMode(root, name, source string, snapshot bool) error {
 	if !validName.MatchString(name) {
 		return fmt.Errorf("invalid skill name")
 	}
@@ -66,20 +72,29 @@ func importExternal(root, name, source string) error {
 	if !fileExists(filepath.Join(source, "SKILL.md")) {
 		return fmt.Errorf("source must be a skill directory containing SKILL.md")
 	}
-	revision, err := runSilentDir(source, "git", "rev-parse", "HEAD")
-	if err != nil {
-		return fmt.Errorf("external source must be a Git checkout: %w", err)
-	}
-	revision = strings.TrimSpace(revision)
-	if skill.Revision != "" && skill.Revision != revision {
-		return fmt.Errorf("source revision differs from catalog pin")
-	}
-	status, err := runSilentDir(source, "git", "status", "--porcelain", "--", source)
-	if err != nil {
-		return err
-	}
-	if strings.TrimSpace(status) != "" {
-		return fmt.Errorf("source skill has uncommitted changes")
+	revision := ""
+	kind := ""
+	if snapshot {
+		if skill.Revision != "" {
+			return fmt.Errorf("local snapshot cannot satisfy a Git revision pin")
+		}
+		kind = "local-snapshot"
+	} else {
+		revision, err = runSilentDir(source, "git", "rev-parse", "HEAD")
+		if err != nil {
+			return fmt.Errorf("external source must be a Git checkout: %w", err)
+		}
+		revision = strings.TrimSpace(revision)
+		if skill.Revision != "" && skill.Revision != revision {
+			return fmt.Errorf("source revision differs from catalog pin")
+		}
+		status, err := runSilentDir(source, "git", "status", "--porcelain", "--", source)
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(status) != "" {
+			return fmt.Errorf("source skill has uncommitted changes")
+		}
 	}
 	digest, err := treeDigest(source)
 	if err != nil {
@@ -120,7 +135,7 @@ func importExternal(root, name, source string) error {
 	if err != nil {
 		return err
 	}
-	p := SkillProvenance{Repository: skill.Repo, Revision: revision, Skill: skill.Skill, TreeDigest: digest}
+	p := SkillProvenance{Kind: kind, SourcePath: source, Repository: skill.Repo, Revision: revision, Skill: skill.Skill, TreeDigest: digest}
 	b, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return err
@@ -139,14 +154,15 @@ func cmdCatalog() error {
 		return fmt.Errorf("usage: oxstack catalog import NAME --source /reviewed/checkout/skill")
 	}
 	f := flag.NewFlagSet("catalog import", flag.ContinueOnError)
-	source := f.String("source", "", "reviewed local Git skill directory")
+	source := f.String("source", "", "reviewed local skill directory")
+	snapshot := f.Bool("snapshot", false, "preserve a local copy with unknown upstream revision; never bypasses Git pins")
 	if err := f.Parse(args[2:]); err != nil {
 		return err
 	}
 	if *source == "" || f.NArg() > 0 {
 		return fmt.Errorf("--source is required")
 	}
-	if err := importExternal(repoRoot(), args[1], *source); err != nil {
+	if err := importExternalMode(repoRoot(), args[1], *source, *snapshot); err != nil {
 		return err
 	}
 	fmt.Println("Imported catalog only; no runtime activated.")

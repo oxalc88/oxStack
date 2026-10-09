@@ -47,10 +47,23 @@ func loadCatalog(root string) (Catalog, error) {
 			if err != nil {
 				return c, err
 			}
-			if provenance.Repository != s.Repo || provenance.Skill != s.Skill || provenance.Revision == "" || digest != provenance.TreeDigest || (s.Revision != "" && s.Revision != provenance.Revision) {
+			if provenance.Repository != s.Repo || provenance.Skill != s.Skill || digest != provenance.TreeDigest || (s.Revision != "" && s.Revision != provenance.Revision) {
 				return c, fmt.Errorf("external skill provenance changed: %s", name)
 			}
-			version = provenance.Revision
+			switch provenance.Kind {
+			case "local-snapshot":
+				if s.Revision != "" || provenance.Revision != "" {
+					return c, fmt.Errorf("snapshot cannot satisfy Git pin: %s", name)
+				}
+				version = "local-sha256:" + digest
+			case "", "git":
+				if provenance.Revision == "" {
+					return c, fmt.Errorf("missing Git revision: %s", name)
+				}
+				version = provenance.Revision
+			default:
+				return c, fmt.Errorf("unknown provenance kind: %s", name)
+			}
 		}
 		c.Skills[name] = Skill{Path: path, Source: s.Repo + "/" + s.Skill, Version: version}
 	}
