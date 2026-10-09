@@ -130,7 +130,8 @@ For a local skill, create `skills/<name>/SKILL.md` with valid skill frontmatter.
 Nothing activates until `<name>` appears in a selection's `skills` list.
 The two `gstack-ab` variants are also catalog capabilities: `qa-byOx` and
 `design-review-byOx`. `sync`/`update` maintain those source files; they no longer
-copy changes into global skill directories. Provision upstream gstack separately.
+copy changes into global skill directories. Provision upstream gstack separately under `catalog/gstack`, or set
+`OXSTACK_GSTACK_SOURCE` to a maintained checkout outside runtime skill discovery.
 
 For an external skill, add catalog metadata to `oxstack.toml`:
 
@@ -199,8 +200,8 @@ them, and the tests do not validate upstream server health.
 |---|---|---|---|
 | Global MCP | `$CODEX_HOME/config.toml` | `~/.claude.json` | `$XDG_CONFIG_HOME/opencode/opencode.json` |
 | Project MCP | `.codex/config.toml` | `.mcp.json` | `opencode.json` |
-| Global skill | `~/.agents/skills` | `~/.claude/skills` | `~/.agents/skills` |
-| Project skill | `.agents/skills` | `.claude/skills` | `.agents/skills` |
+| Global skill | `~/.agents/skills` | `~/.claude/skills` | `$XDG_CONFIG_HOME/opencode/skills` |
+| Project skill | `.agents/skills` | `.claude/skills` | `.opencode/skills` |
 | Global instructions | `$CODEX_HOME/AGENTS.md` | `~/.claude/CLAUDE.md` | `$XDG_CONFIG_HOME/opencode/AGENTS.md` |
 
 Other runtimes have no fabricated Codex-style profile syntax. Explicit profile
@@ -209,7 +210,7 @@ artifacts live under `${XDG_STATE_HOME:-~/.local/state}/oxstack/profiles/<name>`
 ```bash
 go run ./cmd/oxstack install --profile aws-tools --runtime claude
 claude --mcp-config ~/.local/state/oxstack/profiles/aws-tools/claude.json \
-  --append-system-prompt-file ~/.local/state/oxstack/profiles/aws-tools/instructions.md
+  --append-system-prompt-file ~/.local/state/oxstack/profiles/aws-tools/instructions-claude.md
 
 go run ./cmd/oxstack install --profile aws-tools --runtime opencode
 OPENCODE_CONFIG=~/.local/state/oxstack/profiles/aws-tools/opencode.json opencode
@@ -286,3 +287,15 @@ is intentionally not cleaned by this smoke check.
 References: [Codex configuration](https://learn.chatgpt.com/docs/config-file/config-basic),
 [Claude MCP scopes](https://code.claude.com/docs/en/mcp),
 [OpenCode MCP](https://opencode.ai/docs/mcp-servers/).
+
+OpenCode skills use its native `.opencode/skills/` project directory or
+`$XDG_CONFIG_HOME/opencode/skills/` globally. They do not install into Codex's
+shared `.agents/skills/` directory. Claude uses `.claude/skills/`.
+
+Personal app-plugin selections and user MCP definitions can also live in native
+Codex profile files without adding them to oxStack's portable catalog. Installed
+plugins can remain inactive in the base config and be enabled in an explicit
+profile. Keep app-managed definitions and local paths out of the shared catalog.
+
+Profile instruction filenames include the runtime (`instructions-claude.md`,
+`instructions-opencode.md`) so different runtimes can share a profile name safely.

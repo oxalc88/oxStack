@@ -4,6 +4,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -179,5 +180,65 @@ func TestCodexHome(t *testing.T) {
 	expected, _ := canonicalLocation(os.Getenv("CODEX_HOME"))
 	if e.CodexHome != expected {
 		t.Fatalf("CODEX_HOME ignored: %s", e.CodexHome)
+	}
+}
+
+func TestOpenCodeSkillsDoNotActivateCodex(t *testing.T) {
+	e := fixture(t)
+	for _, target := range []Target{{Scope: "global", Runtime: "opencode"}, {Scope: "project", Runtime: "opencode", Project: filepath.Join(e.Home, "project")}} {
+		applySelection(t, e, target, Selection{Skills: []string{"domain-modeling"}})
+		if _, err := os.Lstat(filepath.Join(e.Home, ".agents", "skills", "domain-modeling")); !os.IsNotExist(err) {
+			t.Fatal("OpenCode activated a global Codex skill")
+		}
+		if target.Scope == "project" {
+			if _, err := os.Lstat(filepath.Join(target.Project, ".agents", "skills", "domain-modeling")); !os.IsNotExist(err) {
+				t.Fatal("OpenCode activated a project Codex skill")
+			}
+		}
+		dest := skillDestination(e, target, "domain-modeling")
+		if strings.Contains(dest, string(filepath.Separator)+".agents"+string(filepath.Separator)) {
+			t.Fatal("OpenCode leaked a skill into Codex discovery")
+		}
+		if target.Scope == "project" && dest != filepath.Join(target.Project, ".opencode", "skills", "domain-modeling") {
+			t.Fatal(dest)
+		}
+		if target.Scope == "global" && dest != filepath.Join(e.Home, ".config", "opencode", "skills", "domain-modeling") {
+			t.Fatal(dest)
+		}
+	}
+}
+
+func TestGstackMaintenanceSourceIsOutsideDiscovery(t *testing.T) {
+	e := fixture(t)
+	t.Setenv("OXSTACK_ROOT", e.Root)
+	t.Setenv("OXSTACK_GSTACK_SOURCE", "")
+	if got := gstackDir(); got != filepath.Join(e.Root, "catalog", "gstack") {
+		t.Fatal(got)
+	}
+	t.Setenv("OXSTACK_GSTACK_SOURCE", filepath.Join(e.Home, "maintained-gstack"))
+	if got := gstackDir(); got != filepath.Join(e.Home, "maintained-gstack") {
+		t.Fatal(got)
+	}
+}
+
+func TestRuntimeProfilesCanCoexistAndUninstallIndependently(t *testing.T) {
+	e := fixture(t)
+	claude := Target{Scope: "profile", Runtime: "claude", Profile: "tools"}
+	opencode := Target{Scope: "profile", Runtime: "opencode", Profile: "tools"}
+	selection := Selection{Skills: []string{"bedrock-costs"}}
+	applySelection(t, e, claude, selection)
+	applySelection(t, e, opencode, selection)
+	if instructionsDestination(e, claude) == instructionsDestination(e, opencode) {
+		t.Fatal("runtime profiles share ownership")
+	}
+	p, err := planUninstall(e, claude)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = p.Apply(); err != nil {
+		t.Fatal(err)
+	}
+	if !fileExists(instructionsDestination(e, opencode)) {
+		t.Fatal("Claude uninstall removed OpenCode profile")
 	}
 }

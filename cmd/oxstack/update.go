@@ -31,7 +31,7 @@ func cmdUpdate() {
 
 	gstack := gstackDir()
 	if !dirExists(gstack) {
-		errorf("gstack not found at %s — provide upstream gstack explicitly at ~/.claude/skills/gstack", gstack)
+		errorf("gstack not found at %s — provide upstream gstack in catalog/gstack or set OXSTACK_GSTACK_SOURCE", gstack)
 		os.Exit(1)
 	}
 

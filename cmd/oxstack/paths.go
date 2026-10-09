@@ -68,8 +68,13 @@ func repoRoot() string {
 	return ""
 }
 
-// gstack remains an explicitly provisioned catalog-maintenance source.
-func gstackDir() string { return filepath.Join(homeDir(), ".claude", "skills", "gstack") }
+// Maintenance sources live outside every runtime's skill discovery directories.
+func gstackDir() string {
+	if source := os.Getenv("OXSTACK_GSTACK_SOURCE"); source != "" {
+		return source
+	}
+	return filepath.Join(repoRoot(), "catalog", "gstack")
+}
 
 func syncFilePath() string {
 	return filepath.Join(repoRoot(), "gstack-ab", ".last-sync-commit")

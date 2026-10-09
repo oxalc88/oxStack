@@ -45,6 +45,11 @@ func validateOwnedResource(e Environment, t Target, r Resource) error {
 				key = []string{"instructions"}
 			}
 		}
+		// Recognize the exact previous profile filename so unchanged owned files
+		// can be retired during an upgrade. Fingerprint checks still apply.
+		if t.Scope == "profile" && t.Runtime != "codex" && r.Capability == "instructions" && r.Destination == filepath.Join(profileDir(e, t), "instructions.md") {
+			dest = r.Destination
+		}
 		if r.Destination != dest || r.Kind != kind || fmt.Sprint(r.Key) != fmt.Sprint(key) {
 			return fmt.Errorf("instruction ownership points outside its scope")
 		}

@@ -134,6 +134,16 @@ func skillDestination(e Environment, t Target, name string) string {
 	if t.Scope == "project" {
 		base = t.Project
 	}
+	if t.Runtime == "opencode" {
+		if t.Scope == "project" {
+			return filepath.Join(t.Project, ".opencode", "skills", name)
+		}
+		config := e.ConfigHome
+		if config == "" {
+			config = filepath.Join(e.Home, ".config")
+		}
+		return filepath.Join(config, "opencode", "skills", name)
+	}
 	folder := filepath.Join(".agents", "skills")
 	if t.Runtime == "claude" {
 		folder = filepath.Join(".claude", "skills")
@@ -142,7 +152,7 @@ func skillDestination(e Environment, t Target, name string) string {
 }
 func instructionsDestination(e Environment, t Target) string {
 	if t.Scope == "profile" {
-		return filepath.Join(profileDir(e, t), "instructions.md")
+		return filepath.Join(profileDir(e, t), "instructions-"+t.Runtime+".md")
 	}
 	if t.Runtime == "claude" {
 		if t.Scope == "project" {

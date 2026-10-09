@@ -4,3 +4,5 @@
 # Local imported catalog snapshots and activation ownership are not source.
 /catalog/external/
 /.oxstack/
+
+/catalog/gstack/

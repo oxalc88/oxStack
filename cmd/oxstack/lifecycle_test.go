@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -285,5 +286,56 @@ func TestJSONPreservesUnknownLargeNumbers(t *testing.T) {
 	}
 	if _, err := parseDocument([]byte(`{} {}`), false); err == nil {
 		t.Fatal("trailing JSON accepted")
+	}
+}
+
+func TestPreviousProfileInstructionFilenameUpgradesOnlyIfUnchanged(t *testing.T) {
+	for _, modified := range []bool{false, true} {
+		t.Run(fmt.Sprint(modified), func(t *testing.T) {
+			e := fixture(t)
+			target := Target{Scope: "profile", Runtime: "claude", Profile: "tools"}
+			selection := Selection{Skills: []string{"bedrock-costs"}}
+			applySelection(t, e, target, selection)
+			m, err := loadManifest(e, target)
+			if err != nil {
+				t.Fatal(err)
+			}
+			old := filepath.Join(profileDir(e, target), "instructions.md")
+			for i := range m.Resources {
+				if m.Resources[i].Capability == "instructions" {
+					if err = os.Rename(m.Resources[i].Destination, old); err != nil {
+						t.Fatal(err)
+					}
+					m.Resources[i].Destination = old
+				}
+			}
+			b, err := json.Marshal(m)
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeTest(t, target.manifestPath(e), string(b))
+			if modified {
+				writeTest(t, old, "external edit")
+			}
+			p, err := planInstall(e, target, selection)
+			if modified {
+				if err == nil {
+					t.Fatal("modified legacy file accepted")
+				}
+				if !fileExists(old) {
+					t.Fatal("modified file removed")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = p.Apply(); err != nil {
+				t.Fatal(err)
+			}
+			if fileExists(old) || !fileExists(instructionsDestination(e, target)) {
+				t.Fatal("profile upgrade failed")
+			}
+		})
 	}
 }
